@@ -9,6 +9,7 @@ import { computeReadiness } from '@/lib/readiness'
 import { hasSeenInterests } from '@/lib/interests'
 import { getTodayPrompt, hasSeenTodayPrompt, markPromptSeen, isDailyPromptCompleted } from '@/lib/dailyPrompt'
 import { trackEvent } from '@/lib/analytics'
+import { hasShownReminderPrompt, markReminderPromptShown, shouldShowInAppReminder, saveReminderPrefs, requestNotificationPermission, registerReminderServiceWorker } from '@/lib/reminders'
 import Onboarding from '@/components/Onboarding'
 import PresenceBanner from '@/components/PresenceBanner'
 
@@ -98,6 +99,9 @@ export default function ScenarioPicker() {
   const [showRoleplayPicker, setShowRoleplayPicker] = useState(false)
   const [dailyPrompt, setDailyPrompt] = useState<ReturnType<typeof getTodayPrompt> | null>(null)
   const [dailyDone, setDailyDone] = useState(false)
+  // UUU: Reminder nudge (first-open) + in-app banner
+  const [showReminderNudge, setShowReminderNudge] = useState(false)
+  const [showReminderBanner, setShowReminderBanner] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -119,6 +123,18 @@ export default function ScenarioPicker() {
     setDailyDone(isDailyPromptCompleted())
     if (!hasSeenTodayPrompt()) {
       markPromptSeen()
+    }
+
+    // UUU: Show one-time reminder nudge after onboarding
+    if (isOnboardingComplete() && !hasShownReminderPrompt()) {
+      setShowReminderNudge(true)
+      markReminderPromptShown()
+    }
+
+    // UUU: In-app practice reminder banner (no push needed)
+    const lastPractice = localStorage.getItem('linforo-last-practice-date')
+    if (shouldShowInAppReminder(lastPractice)) {
+      setShowReminderBanner(true)
     }
   }, [router])
 
@@ -282,8 +298,34 @@ export default function ScenarioPicker() {
           Choose a scenario to practice
         </p>
 
+        {/* UUU: In-app reminder banner */}
+        {showReminderBanner && (
+          <div
+            style={{
+              background: '#0a1a2a',
+              border: '1px solid #1a3a5a',
+              borderRadius: 12,
+              padding: '12px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ fontSize: 14, color: '#5a9adf' }}>
+              🇮🇹 Ready for today&apos;s Italian?
+            </div>
+            <button
+              onClick={() => setShowReminderBanner(false)}
+              style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18 }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* Interests & settings link */}
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ textAlign: 'center', marginBottom: 8, display: 'flex', justifyContent: 'center', gap: 16 }}>
           <button
             onClick={() => router.push('/interests')}
             style={{
@@ -296,6 +338,19 @@ export default function ScenarioPicker() {
             }}
           >
             ✨ My interests
+          </button>
+          <button
+            onClick={() => router.push('/settings')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#555',
+              fontSize: 13,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            ⚙️ Settings
           </button>
         </div>
 
@@ -349,6 +404,68 @@ export default function ScenarioPicker() {
             </div>
             <div style={{ fontSize: 14, color: '#555', marginTop: 2 }}>
               {dailyPrompt.text}
+            </div>
+          </div>
+        )}
+
+        {/* UUU: One-time reminder nudge modal */}
+        {showReminderNudge && (
+          <div
+            style={{
+              background: '#0a1a2a',
+              border: '1px solid #1a3a5a',
+              borderRadius: 14,
+              padding: '18px 18px',
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 6 }}>
+              🇮🇹 Daily Italian reminder?
+            </div>
+            <p style={{ fontSize: 14, color: '#888', margin: '0 0 14px' }}>
+              We&apos;ll nudge you once a day — no guilt if you skip!
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={async () => {
+                  const granted = await requestNotificationPermission()
+                  if (granted) {
+                    await registerReminderServiceWorker()
+                    saveReminderPrefs({ enabled: true, time: '09:00' })
+                  }
+                  setShowReminderNudge(false)
+                }}
+                style={{
+                  flex: 1,
+                  background: '#0a84ff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '12px',
+                  color: 'white',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  minHeight: 44,
+                }}
+              >
+                Yes, remind me!
+              </button>
+              <button
+                onClick={() => setShowReminderNudge(false)}
+                style={{
+                  flex: 1,
+                  background: '#1c1c1e',
+                  border: '1px solid #333',
+                  borderRadius: 10,
+                  padding: '12px',
+                  color: '#888',
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  minHeight: 44,
+                }}
+              >
+                Maybe later
+              </button>
             </div>
           </div>
         )}

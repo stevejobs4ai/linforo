@@ -1,0 +1,171 @@
+{
+  "scenarios": [
+    {
+      "id": "freestyle",
+      "emoji": "💬",
+      "title": "Freestyle",
+      "subtitle": "Whatever I want",
+      "systemContext": "The user wants to practice freely. Let them lead the conversation. Help with whatever they ask about in Italian.",
+      "phrases": []
+    },
+    {
+      "id": "restaurant",
+      "emoji": "🍝",
+      "title": "Restaurant",
+      "subtitle": "Order food & drinks",
+      "systemContext": "The user is practicing restaurant Italian. Focus on ordering food, asking about the menu, dietary needs, and paying. Play the role of a friendly Italian waiter when in roleplay mode.",
+      "phrases": [
+        {"italian": "Vorrei ordinare, per favore", "phonetic": "vor-RAY or-dee-NAH-reh, pair fah-VOH-reh", "english": "I'd like to order, please"},
+        {"italian": "Cosa mi consiglia?", "phonetic": "KOH-zah mee con-SEEL-yah", "english": "What do you recommend?"},
+        {"italian": "Sono allergico/a a...", "phonetic": "SOH-noh ah-LAIR-jee-koh/kah ah", "english": "I'm allergic to..."},
+        {"italian": "Un tavolo per due, per favore", "phonetic": "oon TAH-voh-loh pair DOO-eh, pair fah-VOH-reh", "english": "A table for two, please"},
+        {"italian": "Posso vedere il menù?", "phonetic": "POHS-soh veh-DEH-reh eel meh-NOO", "english": "Can I see the menu?"},
+        {"italian": "Prendo il...", "phonetic": "PREN-doh eel", "english": "I'll have the..."},
+        {"italian": "Un'acqua naturale, per favore", "phonetic": "oon-AH-kwah nah-too-RAH-leh, pair fah-VOH-reh", "english": "Still water, please"},
+        {"italian": "Era buonissimo!", "phonetic": "EH-rah bwoh-NEES-see-moh", "english": "It was delicious!"}
+      ]
+    },
+    {
+      "id": "directions",
+      "emoji": "🗺️",
+      "title": "Directions",
+      "subtitle": "Find your way around",
+      "systemContext": "The user is practicing asking for and understanding directions in Italian. Help them navigate streets, find landmarks, and use public transport.",
+      "phrases": [
+        {"italian": "Scusi, dov'è...?", "phonetic": "SKOO-zee, doh-VEH", "english": "Excuse me, where is...?"},
+        {"italian": "Come arrivo a...?", "phonetic": "KOH-meh ar-REE-voh ah", "english": "How do I get to...?"},
+        {"italian": "È lontano da qui?", "phonetic": "eh lon-TAH-noh dah kwee", "english": "Is it far from here?"},
+        {"italian": "Giri a destra", "phonetic": "JEE-ree ah DEH-strah", "english": "Turn right"},
+        {"italian": "Giri a sinistra", "phonetic": "JEE-ree ah see-NEE-strah", "english": "Turn left"},
+        {"italian": "Vada dritto", "phonetic": "VAH-dah DREET-toh", "english": "Go straight"},
+        {"italian": "Dov'è la fermata dell'autobus?", "phonetic": "doh-VEH lah fair-MAH-tah dell-OW-toh-boos", "english": "Where is the bus stop?"},
+        {"italian": "Mi sono perso/a", "phonetic": "mee SOH-noh PAIR-soh/sah", "english": "I'm lost"}
+      ]
+    },
+    {
+      "id": "bathroom",
+      "emoji": "🚽",
+      "title": "Bathroom",
+      "subtitle": "Find the restroom",
+      "systemContext": "The user needs to find and use restrooms in Italy. Keep it practical and quick — this is often an urgent situation!",
+      "phrases": [
+        {"italian": "Dov'è il bagno?", "phonetic": "doh-VEH eel BAHN-yoh", "english": "Where is the bathroom?"},
+        {"italian": "Posso usare il bagno?", "phonetic": "POHS-soh oo-ZAH-reh eel BAHN-yoh", "english": "Can I use the bathroom?"},
+        {"italian": "C'è un bagno pubblico qui vicino?", "phonetic": "cheh oon BAHN-yoh POOB-blee-koh kwee vee-CHEE-noh", "english": "Is there a public bathroom nearby?"},
+        {"italian": "Il bagno è occupato", "phonetic": "eel BAHN-yoh eh oh-koo-PAH-toh", "english": "The bathroom is occupied"},
+        {"italian": "Dov'è il bagno per signore/signori?", "phonetic": "doh-VEH eel BAHN-yoh pair seen-YOH-reh/seen-YOH-ree", "english": "Where is the ladies'/men's room?"}
+      ]
+    },
+    {
+      "id": "greetings",
+      "emoji": "👋",
+      "title": "Greetings",
+      "subtitle": "Say hello & goodbye",
+      "systemContext": "The user is practicing basic Italian greetings and pleasantries. Cover formal and informal contexts. Italians greet differently depending on time of day and familiarity.",
+      "phrases": [
+        {"italian": "Buongiorno!", "phonetic": "bwon-JOHR-noh", "english": "Good morning! (formal hello)"},
+        {"italian": "Buonasera!", "phonetic": "bwoh-nah-SEH-rah", "english": "Good evening!"},
+        {"italian": "Ciao!", "phonetic": "CHOW", "english": "Hi / Bye (informal)"},
+        {"italian": "Come sta?", "phonetic": "KOH-meh stah", "english": "How are you? (formal)"},
+        {"italian": "Piacere di conoscerla", "phonetic": "pyah-CHEH-reh dee koh-NOH-shair-lah", "english": "Nice to meet you (formal)"},
+        {"italian": "Mi chiamo...", "phonetic": "mee KYAH-moh", "english": "My name is..."},
+        {"italian": "Arrivederci!", "phonetic": "ar-ree-veh-DAIR-chee", "english": "Goodbye! (formal)"},
+        {"italian": "A presto!", "phonetic": "ah PREH-stoh", "english": "See you soon!"}
+      ]
+    },
+    {
+      "id": "market",
+      "emoji": "🛒",
+      "title": "Market",
+      "subtitle": "Shop at markets & stores",
+      "systemContext": "The user is practicing shopping at Italian markets and stores. Cover browsing, asking about products, quantities, and paying. Italian markets are social — vendors chat!",
+      "phrases": [
+        {"italian": "Quanto costa?", "phonetic": "KWAHN-toh KOH-stah", "english": "How much does it cost?"},
+        {"italian": "Vorrei un chilo di...", "phonetic": "vor-RAY oon KEE-loh dee", "english": "I'd like a kilo of..."},
+        {"italian": "Posso assaggiare?", "phonetic": "POHS-soh ahs-sahj-JAH-reh", "english": "Can I taste it?"},
+        {"italian": "È fresco?", "phonetic": "eh FREH-skoh", "english": "Is it fresh?"},
+        {"italian": "Basta così, grazie", "phonetic": "BAH-stah koh-ZEE, GRAH-tsyeh", "english": "That's enough, thanks"},
+        {"italian": "Avete...?", "phonetic": "ah-VEH-teh", "english": "Do you have...?"},
+        {"italian": "Accettate carte di credito?", "phonetic": "ah-chet-TAH-teh KAR-teh dee KREH-dee-toh", "english": "Do you accept credit cards?"}
+      ]
+    },
+    {
+      "id": "price",
+      "emoji": "💰",
+      "title": "Price",
+      "subtitle": "Ask about costs",
+      "systemContext": "The user is practicing asking about prices, understanding numbers, and handling money situations in Italian.",
+      "phrases": [
+        {"italian": "Quanto costa questo?", "phonetic": "KWAHN-toh KOH-stah KWEH-stoh", "english": "How much is this?"},
+        {"italian": "È troppo caro", "phonetic": "eh TROHP-poh KAH-roh", "english": "It's too expensive"},
+        {"italian": "C'è uno sconto?", "phonetic": "cheh OO-noh SKOHN-toh", "english": "Is there a discount?"},
+        {"italian": "Posso pagare in contanti?", "phonetic": "POHS-soh pah-GAH-reh een kon-TAHN-tee", "english": "Can I pay in cash?"},
+        {"italian": "Mi può fare lo scontrino?", "phonetic": "mee pwoh FAH-reh loh skon-TREE-noh", "english": "Can I get a receipt?"},
+        {"italian": "Quanto viene in tutto?", "phonetic": "KWAHN-toh VYEH-neh een TOOT-toh", "english": "How much is it altogether?"}
+      ]
+    },
+    {
+      "id": "excuse_me",
+      "emoji": "🙏",
+      "title": "Excuse Me",
+      "subtitle": "Polite phrases & apologies",
+      "systemContext": "The user is practicing polite Italian expressions — getting attention, apologizing, and being courteous. Italians value politeness!",
+      "phrases": [
+        {"italian": "Scusi", "phonetic": "SKOO-zee", "english": "Excuse me (formal)"},
+        {"italian": "Mi scusi, può aiutarmi?", "phonetic": "mee SKOO-zee, pwoh ah-yoo-TAR-mee", "english": "Excuse me, can you help me?"},
+        {"italian": "Mi dispiace", "phonetic": "mee dee-SPYAH-cheh", "english": "I'm sorry"},
+        {"italian": "Non parlo bene l'italiano", "phonetic": "non PAR-loh BEH-neh lee-tahl-YAH-noh", "english": "I don't speak Italian well"},
+        {"italian": "Parla inglese?", "phonetic": "PAR-lah een-GLEH-zeh", "english": "Do you speak English?"},
+        {"italian": "Può ripetere, per favore?", "phonetic": "pwoh ree-PEH-teh-reh, pair fah-VOH-reh", "english": "Can you repeat that, please?"},
+        {"italian": "Più piano, per favore", "phonetic": "pyoo PYAH-noh, pair fah-VOH-reh", "english": "Slower, please"}
+      ]
+    },
+    {
+      "id": "help",
+      "emoji": "🆘",
+      "title": "Ask for Help",
+      "subtitle": "Get assistance",
+      "systemContext": "The user is practicing asking for help in Italian — from simple questions to more urgent situations.",
+      "phrases": [
+        {"italian": "Mi può aiutare?", "phonetic": "mee pwoh ah-yoo-TAH-reh", "english": "Can you help me?"},
+        {"italian": "Ho bisogno di aiuto", "phonetic": "oh bee-ZOHN-yoh dee ah-YOO-toh", "english": "I need help"},
+        {"italian": "Non capisco", "phonetic": "non kah-PEE-skoh", "english": "I don't understand"},
+        {"italian": "Può scriverlo?", "phonetic": "pwoh SKREE-vehr-loh", "english": "Can you write it down?"},
+        {"italian": "Dov'è l'ospedale più vicino?", "phonetic": "doh-VEH lohs-peh-DAH-leh pyoo vee-CHEE-noh", "english": "Where is the nearest hospital?"},
+        {"italian": "Ho perso il mio passaporto", "phonetic": "oh PAIR-soh eel MEE-oh pahs-sah-POR-toh", "english": "I've lost my passport"},
+        {"italian": "Chiami la polizia, per favore", "phonetic": "KYAH-mee lah poh-lee-TSEE-ah, pair fah-VOH-reh", "english": "Call the police, please"}
+      ]
+    },
+    {
+      "id": "check",
+      "emoji": "💳",
+      "title": "The Check",
+      "subtitle": "Pay the bill",
+      "systemContext": "The user is practicing asking for and paying the bill at restaurants and cafés in Italy. Cover tipping customs (not expected but appreciated) and split bills.",
+      "phrases": [
+        {"italian": "Il conto, per favore", "phonetic": "eel KON-toh, pair fah-VOH-reh", "english": "The check, please"},
+        {"italian": "Possiamo pagare separatamente?", "phonetic": "pohs-SYAH-moh pah-GAH-reh seh-pah-rah-tah-MEN-teh", "english": "Can we pay separately?"},
+        {"italian": "Accettate carte?", "phonetic": "ah-chet-TAH-teh KAR-teh", "english": "Do you accept cards?"},
+        {"italian": "Tenga il resto", "phonetic": "TEN-gah eel REH-stoh", "english": "Keep the change"},
+        {"italian": "C'è il coperto?", "phonetic": "cheh eel koh-PAIR-toh", "english": "Is there a cover charge?"},
+        {"italian": "Posso pagare con il telefono?", "phonetic": "POHS-soh pah-GAH-reh kon eel teh-LEH-foh-noh", "english": "Can I pay with my phone?"}
+      ]
+    },
+    {
+      "id": "thank_you",
+      "emoji": "❤️",
+      "title": "Thank You",
+      "subtitle": "Express gratitude",
+      "systemContext": "The user is practicing ways to say thank you and express appreciation in Italian. Cover formal and informal, plus responses to thanks.",
+      "phrases": [
+        {"italian": "Grazie!", "phonetic": "GRAH-tsyeh", "english": "Thank you!"},
+        {"italian": "Grazie mille!", "phonetic": "GRAH-tsyeh MEEL-leh", "english": "Thank you so much!"},
+        {"italian": "La ringrazio", "phonetic": "lah reen-GRAH-tsyoh", "english": "I thank you (formal)"},
+        {"italian": "Molto gentile", "phonetic": "MOHL-toh jen-TEE-leh", "english": "Very kind of you"},
+        {"italian": "Prego!", "phonetic": "PREH-goh", "english": "You're welcome!"},
+        {"italian": "Di niente!", "phonetic": "dee NYEHN-teh", "english": "It's nothing! / No problem!"},
+        {"italian": "Grazie per l'aiuto", "phonetic": "GRAH-tsyeh pair lah-YOO-toh", "english": "Thanks for the help"}
+      ]
+    }
+  ]
+}

@@ -11,6 +11,23 @@ export const metadata: Metadata = {
   description: 'Voice-first Italian language learning app',
 }
 
+// Inline script runs before first paint to avoid theme flash
+const themeScript = `
+(function() {
+  try {
+    var stored = localStorage.getItem('linforo-theme');
+    var theme = stored === 'light' || stored === 'dark'
+      ? stored
+      : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.add('dark-theme');
+    }
+  } catch(e) {}
+})();
+`
+
 export default function RootLayout({
   children,
 }: {
@@ -22,9 +39,13 @@ export default function RootLayout({
       appearance={{ variables: { colorBackground: '#0a0a0a', colorText: '#ffffff' } }}
     >
       <html lang="en">
+        <head>
+          {/* Apply theme before paint to avoid flash */}
+          <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        </head>
         <body className={inter.className}>
           {children}
-          {/* Plausible analytics — domain configured when Reece sets up the account */}
+          {/* Plausible analytics */}
           <Script
             defer
             data-domain="linforo.app"

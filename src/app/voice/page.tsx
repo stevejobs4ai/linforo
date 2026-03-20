@@ -12,6 +12,7 @@ import { incrementScenarioConversation } from '@/lib/readiness'
 import { computeSessionSummary, formatSummaryForShare } from '@/lib/sessionSummary'
 import { saveSession } from '@/lib/history'
 import { trackEvent } from '@/lib/analytics'
+import { getWeakPhrases } from '@/lib/confidence'
 
 type VoiceGender = 'female' | 'male'
 
@@ -128,6 +129,23 @@ function VoicePage() {
   const tutorAudioBlobRef = useRef<ArrayBuffer | null>(null)
   const [showPronunciationCompare, setShowPronunciationCompare] = useState(false)
   const pronunciationAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // SSS: Text input fallback
+  const [showTextInput, setShowTextInput] = useState(false)
+  const [textInputValue, setTextInputValue] = useState('')
+  const [isSendingText, setIsSendingText] = useState(false)
+
+  // QQQ: Hands-free VAD mode
+  const [handsFreeMode, setHandsFreeMode] = useState(false)
+  const handsFreeRef = useRef(false)
+  const vadStreamRef = useRef<MediaStream | null>(null)
+  const vadAudioCtxRef = useRef<AudioContext | null>(null)
+  const vadAnalyserRef = useRef<AnalyserNode | null>(null)
+  const vadActiveRef = useRef(false)
+  const vadAboveThresholdSince = useRef<number | null>(null)
+  const vadSilenceSince = useRef<number | null>(null)
+  const vadAnimFrameRef = useRef<number | null>(null)
+  const [vadState, setVadState] = useState<'idle' | 'listening' | 'recording' | 'processing'>('idle')
 
   // Analytics tracking
   const roleplayAnalyticsTracked = useRef(false)
@@ -788,10 +806,13 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                 ? roleplayChar.prompt
                 : generateSystemPrompt(
                     scenarioRef.current,
-                    voiceGenderRef.current
+                    voiceGenderRef.current,
+                    getWeakPhrases(3).map((p) => p.phraseItalian).join(', ') || undefined
                   )
 
               await handleStreamingChat(userMsg, systemPrompt)
+
+              // QQQ: Resume VAD listening after tutor responds (handled in useEffect)
             }
 
             mediaRecorder.start(100)
@@ -824,6 +845,206 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     voiceGenderRef.current = next
     localStorage.setItem('linforo-voice-gender', next)
   }
+
+  // ── QQQ: VAD (Voice Activity Detection) ──────────────────────────────────
+  const VAD_THRESHOLD = 15      // 0-128 frequency avg
+  const VAD_ONSET_MS  = 300     // ms of continuous sound before starting
+  const VAD_SILENCE_MS = 1500   // ms of silence before stopping
+
+  const stopVAD = useCallback(() => {
+    vadActiveRef.current = false
+    if (vadAnimFrameRef.current) {
+      cancelAnimationFrame(vadAnimFrameRef.current)
+      vadAnimFrameRef.current = null
+    }
+    if (vadStreamRef.current) {
+      vadStreamRef.current.getTracks().forEach((t) => t.stop())
+      vadStreamRef.current = null
+    }
+    if (vadAudioCtxRef.current) {
+      vadAudioCtxRef.current.close().catch(() => {})
+      vadAudioCtxRef.current = null
+    }
+    vadAnalyserRef.current = null
+    vadAboveThresholdSince.current = null
+    vadSilenceSince.current = null
+    setVadState('idle')
+  }, [])
+
+  const startVADListening = useCallback(async () => {
+    if (vadActiveRef.current) return
+    vadActiveRef.current = true
+    vadAboveThresholdSince.current = null
+    vadSilenceSince.current = null
+    setVadState('listening')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      vadStreamRef.current = stream
+      const ctx = new AudioContext()
+      vadAudioCtxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      vadAnalyserRef.current = analyser
+      const source = ctx.createMediaStreamSource(stream)
+      source.connect(analyser)
+      const data = new Uint8Array(analyser.frequencyBinCount)
+
+      const tick = () => {
+        if (!vadActiveRef.current) return
+        analyser.getByteFrequencyData(data)
+        const avg = data.reduce((a, b) => a + b, 0) / data.length
+        const now = Date.now()
+
+        if (avg > VAD_THRESHOLD) {
+          vadSilenceSince.current = null
+          if (!vadAboveThresholdSince.current) {
+            vadAboveThresholdSince.current = now
+          } else if (now - vadAboveThresholdSince.current >= VAD_ONSET_MS) {
+            // Voice onset detected — stop monitoring stream, start recording
+            vadAboveThresholdSince.current = null
+            vadActiveRef.current = false
+            if (vadAnimFrameRef.current) {
+              cancelAnimationFrame(vadAnimFrameRef.current)
+              vadAnimFrameRef.current = null
+            }
+            if (vadAudioCtxRef.current) {
+              vadAudioCtxRef.current.close().catch(() => {})
+              vadAudioCtxRef.current = null
+            }
+            if (vadStreamRef.current) {
+              vadStreamRef.current.getTracks().forEach((t) => t.stop())
+              vadStreamRef.current = null
+            }
+            vadAnalyserRef.current = null
+            setVadState('recording')
+            handleMicClick()
+            return
+          }
+        } else {
+          vadAboveThresholdSince.current = null
+          if (!vadSilenceSince.current) {
+            vadSilenceSince.current = now
+          }
+        }
+        vadAnimFrameRef.current = requestAnimationFrame(tick)
+      }
+      vadAnimFrameRef.current = requestAnimationFrame(tick)
+    } catch {
+      stopVAD()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleMicClick, stopVAD])
+
+  // QQQ: Silence detection during recording (auto-stop)
+  const vadSilenceMonitorRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const vadSilenceStreamRef = useRef<MediaStream | null>(null)
+  const vadSilenceCtxRef = useRef<AudioContext | null>(null)
+
+  const stopVADSilenceMonitor = useCallback(() => {
+    if (vadSilenceMonitorRef.current) {
+      clearInterval(vadSilenceMonitorRef.current)
+      vadSilenceMonitorRef.current = null
+    }
+    if (vadSilenceStreamRef.current) {
+      vadSilenceStreamRef.current.getTracks().forEach((t) => t.stop())
+      vadSilenceStreamRef.current = null
+    }
+    if (vadSilenceCtxRef.current) {
+      vadSilenceCtxRef.current.close().catch(() => {})
+      vadSilenceCtxRef.current = null
+    }
+  }, [])
+
+  const startVADSilenceMonitor = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      vadSilenceStreamRef.current = stream
+      const ctx = new AudioContext()
+      vadSilenceCtxRef.current = ctx
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      const source = ctx.createMediaStreamSource(stream)
+      source.connect(analyser)
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      let silenceStart: number | null = null
+
+      vadSilenceMonitorRef.current = setInterval(() => {
+        analyser.getByteFrequencyData(data)
+        const avg = data.reduce((a, b) => a + b, 0) / data.length
+        if (avg < VAD_THRESHOLD) {
+          if (!silenceStart) silenceStart = Date.now()
+          else if (Date.now() - silenceStart >= VAD_SILENCE_MS) {
+            stopVADSilenceMonitor()
+            handleMicClick() // stop recording
+          }
+        } else {
+          silenceStart = null
+        }
+      }, 100)
+    } catch {
+      // fallback: ignore
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleMicClick, stopVADSilenceMonitor])
+
+  // QQQ: Watch audioState to control VAD lifecycle
+  useEffect(() => {
+    if (!handsFreeRef.current) return
+
+    if (audioState === 'idle' || audioState === 'say-it-back') {
+      stopVADSilenceMonitor()
+      startVADListening()
+    } else if (audioState === 'recording') {
+      setVadState('recording')
+      startVADSilenceMonitor()
+    } else if (audioState === 'processing' || audioState === 'playing') {
+      stopVADSilenceMonitor()
+      setVadState('processing')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioState])
+
+  const toggleHandsFree = useCallback(() => {
+    const next = !handsFreeMode
+    setHandsFreeMode(next)
+    handsFreeRef.current = next
+    if (next) {
+      if (audioState === 'idle' || audioState === 'say-it-back') {
+        startVADListening()
+      }
+    } else {
+      stopVAD()
+      stopVADSilenceMonitor()
+    }
+  }, [handsFreeMode, audioState, startVADListening, stopVAD, stopVADSilenceMonitor])
+
+  // ── SSS: Text input fallback ──────────────────────────────────────────────
+  const handleSendText = useCallback(async () => {
+    const text = textInputValue.trim()
+    const currentlyProcessing = audioState === 'processing' || audioState === 'playing'
+    if (!text || isSendingText || currentlyProcessing) return
+    setIsSendingText(true)
+    setTextInputValue('')
+
+    if (!conversationStartedTracked.current) {
+      conversationStartedTracked.current = true
+      trackEvent('conversation_started')
+    }
+
+    const userMsg = createMessage('user', text)
+    setMessages((prev) => [...prev, userMsg])
+
+    const systemPrompt = isRoleplay
+      ? roleplayChar.prompt
+      : generateSystemPrompt(
+          scenarioRef.current,
+          voiceGenderRef.current,
+          getWeakPhrases(3).map((p) => p.phraseItalian).join(', ') || undefined
+        )
+
+    await handleStreamingChat(userMsg, systemPrompt)
+    setIsSendingText(false)
+  }, [textInputValue, isSendingText, audioState, isRoleplay, roleplayChar, handleStreamingChat])
 
   const handleBookmark = (msg: ConversationMessage) => {
     if (!scenario) return
@@ -992,7 +1213,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
 
   const isRecording = audioState === 'recording'
   const isSayItBack = audioState === 'say-it-back'
-  const isProcessing = audioState === 'processing' || audioState === 'playing'
+  const isProcessing = audioState === 'processing' || audioState === 'playing' || isSendingText
 
   const summary = showSummary
     ? computeSessionSummary(
@@ -1024,7 +1245,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
   return (
     <div
       style={{
-        background: '#0a0a0a',
+        background: 'var(--bg)',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -1545,29 +1766,89 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           ❓
         </button>
 
+        {/* QQQ: Hands-free toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={toggleHandsFree}
+            style={{
+              background: handsFreeMode ? '#0a2a1a' : '#1c1c1e',
+              border: `1px solid ${handsFreeMode ? '#1a5a2a' : '#333'}`,
+              borderRadius: 20,
+              padding: '7px 14px',
+              color: handsFreeMode ? '#34c759' : '#666',
+              fontSize: 13,
+              fontWeight: handsFreeMode ? 600 : 400,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 36,
+            }}
+            aria-label={handsFreeMode ? 'Disable hands-free mode' : 'Enable hands-free mode'}
+          >
+            {handsFreeMode ? '🎙️ Hands-free ON' : '🎙️ Hands-free'}
+          </button>
+        </div>
+
+        {/* QQQ: VAD visual indicator */}
+        {handsFreeMode && vadState === 'listening' && (
+          <div
+            style={{
+              fontSize: 13,
+              color: '#34c759',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: '#34c759',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            />
+            Listening…
+          </div>
+        )}
+        {handsFreeMode && vadState === 'processing' && (
+          <div style={{ fontSize: 13, color: '#ff9500', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff9500' }} />
+            Processing…
+          </div>
+        )}
+
         <button
-          onClick={handleMicClick}
-          disabled={isProcessing}
+          onClick={handsFreeMode ? undefined : handleMicClick}
+          disabled={isProcessing || (handsFreeMode && vadState !== 'recording')}
           aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-          className={isRecording ? 'mic-pulse' : ''}
+          className={isRecording ? 'mic-pulse' : handsFreeMode && vadState === 'listening' ? 'vad-listening' : ''}
           style={{
-            width: 80,
-            height: 80,
+            width: showTextInput ? 64 : 80,
+            height: showTextInput ? 64 : 80,
             borderRadius: '50%',
             border: 'none',
-            cursor: isProcessing ? 'not-allowed' : 'pointer',
-            fontSize: 32,
+            cursor: handsFreeMode
+              ? 'default'
+              : isProcessing
+              ? 'not-allowed'
+              : 'pointer',
+            fontSize: showTextInput ? 26 : 32,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
             background: isRecording
               ? '#ff3b30'
+              : handsFreeMode && vadState === 'listening'
+              ? '#0a2a0a'
               : isSayItBack
               ? '#ffd60a'
               : '#1c1c1e',
-            color: isRecording || isSayItBack ? 'white' : '#888',
-            transition: 'background 0.2s',
+            color: isRecording || isSayItBack ? 'white' : handsFreeMode && vadState === 'listening' ? '#34c759' : '#888',
+            transition: 'background 0.2s, width 0.2s, height 0.2s',
           }}
         >
           {isRecording ? '⏹' : '🎤'}
@@ -1591,15 +1872,75 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
 
         <div style={{ fontSize: 14, color: '#666' }}>
           {isRecording
-            ? 'Tap to stop'
+            ? handsFreeMode ? 'Speak… (auto-stops on silence)' : 'Tap to stop'
             : isProcessing
             ? 'Processing...'
+            : handsFreeMode && vadState === 'listening'
+            ? 'Listening for your voice…'
             : isSayItBack
             ? shadowMode
               ? 'Shadow it!'
               : 'Tap mic to repeat!'
             : 'Tap to speak'}
         </div>
+
+        {/* SSS: Text input fallback */}
+        {showTextInput ? (
+          <div style={{ width: '100%', display: 'flex', gap: 8, maxWidth: 380 }}>
+            <input
+              type="text"
+              value={textInputValue}
+              onChange={(e) => setTextInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSendText() }}
+              placeholder="Type in English or Italian…"
+              autoFocus
+              style={{
+                flex: 1,
+                background: '#1c1c1e',
+                border: '1px solid #333',
+                borderRadius: 12,
+                padding: '12px 14px',
+                color: 'white',
+                fontSize: 15,
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={handleSendText}
+              disabled={!textInputValue.trim() || isSendingText || isProcessing}
+              style={{
+                background: textInputValue.trim() && !isProcessing ? '#0a84ff' : '#333',
+                border: 'none',
+                borderRadius: 12,
+                padding: '12px 16px',
+                color: 'white',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: textInputValue.trim() && !isProcessing ? 'pointer' : 'not-allowed',
+                minWidth: 60,
+              }}
+            >
+              {isSendingText ? '…' : '→'}
+            </button>
+          </div>
+        ) : null}
+
+        {/* SSS: Toggle text input */}
+        <button
+          onClick={() => setShowTextInput((v) => !v)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#555',
+            fontSize: 13,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            padding: '4px 0',
+          }}
+        >
+          {showTextInput ? 'Hide keyboard' : 'Or type instead'}
+        </button>
       </div>
 
       <audio ref={audioRef} style={{ display: 'none' }} />

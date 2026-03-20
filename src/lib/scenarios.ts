@@ -1,4 +1,5 @@
-import scenariosData from '../../content/scenarios.json'
+import scenariosData from '../../content/scenarios/italian.json'
+import languagesData from '../../content/languages.json'
 
 export interface ScenarioPhrase {
   italian: string
@@ -15,6 +16,23 @@ export interface Scenario {
   systemContext: string
   phrases: ScenarioPhrase[]
   featured?: boolean
+}
+
+export interface LanguageConfig {
+  name: string
+  nativeName: string
+  flag: string
+  code: string
+  deepgramLanguage?: string
+  elevenLabsVoices?: { female: string; male: string }
+  scenariosPath?: string
+  available: boolean
+}
+
+export const LANGUAGES: Record<string, LanguageConfig> = languagesData as Record<string, LanguageConfig>
+
+export function getAvailableLanguages(): Array<{ id: string } & LanguageConfig> {
+  return Object.entries(LANGUAGES).map(([id, cfg]) => ({ id, ...cfg }))
 }
 
 export const SCENARIOS: Scenario[] = scenariosData.scenarios.map((s, i) => ({

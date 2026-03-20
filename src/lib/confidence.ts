@@ -100,3 +100,29 @@ export function countOwnedPhrases(): number {
   const data = load()
   return Object.values(data).filter((p) => p.status === 'owned').length
 }
+
+/**
+ * Returns weak phrases (status 'new' or 'practicing') sorted by oldest lastAttempted.
+ * Used by spaced repetition to surface forgotten phrases.
+ */
+export function getWeakPhrases(limit = 3): PhraseConfidence[] {
+  const data = load()
+  return Object.values(data)
+    .filter((p) => p.status === 'new' || p.status === 'practicing')
+    .sort((a, b) => a.lastAttempted - b.lastAttempted)
+    .slice(0, limit)
+}
+
+/**
+ * Promote a phrase to 'owned' after sustained successful use.
+ * Called externally when the tutor resurfaces a phrase and the user responds well.
+ */
+export function promoteToOwned(phraseItalian: string): PhraseConfidence | null {
+  const data = load()
+  const existing = data[phraseItalian]
+  if (!existing) return null
+  const updated: PhraseConfidence = { ...existing, status: 'owned' }
+  data[phraseItalian] = updated
+  save(data)
+  return updated
+}

@@ -1,0 +1,35 @@
+{
+  "italian": {
+    "name": "Italian",
+    "nativeName": "Italiano",
+    "flag": "🇮🇹",
+    "code": "it",
+    "deepgramLanguage": "it",
+    "elevenLabsVoices": {
+      "female": "Xb7hH8MSUJpSbSDYk0k2",
+      "male": "ErXwobaYiN019PkySvjV"
+    },
+    "scenariosPath": "content/scenarios/italian.json",
+    "available": true
+  },
+  "spanish": {
+    "name": "Spanish",
+    "nativeName": "Español",
+    "flag": "🇪🇸",
+    "code": "es",
+    "deepgramLanguage": "es",
+    "elevenLabsVoices": {
+      "female": "placeholder",
+      "male": "placeholder"
+    },
+    "scenariosPath": "content/scenarios/spanish.json",
+    "available": false
+  },
+  "french": {
+    "name": "French",
+    "nativeName": "Français",
+    "flag": "🇫🇷",
+    "code": "fr",
+    "available": false
+  }
+}

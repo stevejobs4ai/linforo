@@ -1,9 +1,11 @@
 import { Scenario } from './scenarios'
 import { getInterestsPromptText } from './interests'
+import { getSelectedPersona } from './personas'
 
 export function generateSystemPrompt(
   scenario: Scenario | undefined,
-  voiceGender: 'male' | 'female'
+  voiceGender: 'male' | 'female',
+  weakPhrasesText?: string
 ): string {
   const scenarioContext =
     scenario && scenario.id !== 'freestyle'
@@ -13,10 +15,17 @@ export function generateSystemPrompt(
 
   const interestsText = getInterestsPromptText()
 
-  return `You are a patient, warm Italian language tutor. Your student is learning Italian for travel.
+  const persona = getSelectedPersona()
+  const personaLine = persona.systemPromptAddition
+
+  const weakPhrasesSection = weakPhrasesText
+    ? `\nThe user is struggling with these phrases: ${weakPhrasesText}. Naturally weave one of them into the conversation every 3-5 exchanges. Dont make it feel forced — just find natural moments to use them.\n`
+    : ''
+
+  return `${personaLine}
 
 ${scenarioContext}
-${interestsText ? `\n${interestsText}\n` : ''}
+${interestsText ? `\n${interestsText}\n` : ''}${weakPhrasesSection}
 Rules:
 1. Always respond with an Italian phrase the student can use, formatted as:
    **Italian phrase** (foh-NET-ik pruh-NUN-see-AY-shun) — brief English meaning
