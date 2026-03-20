@@ -11,6 +11,7 @@ import { incrementConversationCount } from '@/lib/conversationCount'
 import { incrementScenarioConversation } from '@/lib/readiness'
 import { computeSessionSummary, formatSummaryForShare } from '@/lib/sessionSummary'
 import { saveSession } from '@/lib/history'
+import { trackEvent } from '@/lib/analytics'
 
 type VoiceGender = 'female' | 'male'
 
@@ -104,6 +105,34 @@ function VoicePage() {
   const [showSummary, setShowSummary] = useState(false)
   const messagesForSummaryRef = useRef<ConversationMessage[]>([])
 
+  // WW: WebSocket streaming transcription
+  const wsRef = useRef<WebSocket | null>(null)
+  const finalTranscriptRef = useRef<string>('')
+  const interimTranscriptRef = useRef<string>('')
+  const [interimTranscript, setInterimTranscript] = useState<string>('')
+
+  // XX: Streaming TTS queue
+  const ttsQueueRef = useRef<Array<{ text: string; blob?: ArrayBuffer; index: number }>>([])
+  const ttsPlayIndexRef = useRef(0)
+  const isTTSPlayingRef = useRef(false)
+  const totalSentencesRef = useRef(0)
+  const fullReplyRef = useRef('')
+  const isTTSStreamingRef = useRef(false)
+
+  // YY: Error handling + toast
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: 'error' | 'info' | 'warning' }>>([])
+  const [isOffline, setIsOffline] = useState(false)
+
+  // AAA: Pronunciation replay
+  const userAudioBlobRef = useRef<Blob | null>(null)
+  const tutorAudioBlobRef = useRef<ArrayBuffer | null>(null)
+  const [showPronunciationCompare, setShowPronunciationCompare] = useState(false)
+  const pronunciationAutoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Analytics tracking
+  const roleplayAnalyticsTracked = useRef(false)
+  const conversationStartedTracked = useRef(false)
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -111,6 +140,27 @@ function VoicePage() {
   const messagesRef = useRef<ConversationMessage[]>([])
   const scenarioRef = useRef<Scenario | undefined>(undefined)
   const voiceGenderRef = useRef<VoiceGender>('female')
+
+  // YY: Show toast helper
+  const showToast = useCallback((message: string, type: 'error' | 'info' | 'warning' = 'error') => {
+    const id = `toast-${Date.now()}-${Math.random()}`
+    setToasts((prev) => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id))
+    }, 4000)
+  }, [])
+
+  // YY: Offline/online detection
+  useEffect(() => {
+    const handleOffline = () => setIsOffline(true)
+    const handleOnline = () => setIsOffline(false)
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+    return () => {
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [])
 
   useEffect(() => {
     const s = getScenarioById(scenarioId)
@@ -143,6 +193,14 @@ function VoicePage() {
       roleplaySummaryTriggered.current = true
     }
   }, [messages, isRoleplay])
+
+  // Analytics: track roleplay started
+  useEffect(() => {
+    if (isRoleplay && !roleplayAnalyticsTracked.current) {
+      roleplayAnalyticsTracked.current = true
+      trackEvent('roleplay_started')
+    }
+  }, [isRoleplay])
 
   const dispatch = useCallback((event: AudioEvent) => {
     setAudioState((prev) => transition(prev, event))
@@ -184,35 +242,136 @@ function VoicePage() {
     }
   }, [router, isRoleplay, persistSession])
 
-  // ── TTS helper ──────────────────────────────────────────────────────────────
+  // XX: tryPlayNextTTS — play sentences in order as TTS arrives
+  const tryPlayNextTTS = useCallback(() => {
+    if (isTTSPlayingRef.current) return
+    const queue = ttsQueueRef.current
+    const nextItem = queue.find((item) => item.index === ttsPlayIndexRef.current)
+    if (!nextItem || !nextItem.blob) return
+
+    isTTSPlayingRef.current = true
+    const buf = nextItem.blob
+    // AAA: store last tutor audio buffer
+    tutorAudioBlobRef.current = buf
+    const blob = new Blob([buf], { type: 'audio/mpeg' })
+    const url = URL.createObjectURL(blob)
+
+    if (audioRef.current) {
+      audioRef.current.src = url
+      audioRef.current.onended = () => {
+        URL.revokeObjectURL(url)
+        isTTSPlayingRef.current = false
+        ttsPlayIndexRef.current += 1
+
+        if (ttsPlayIndexRef.current >= totalSentencesRef.current && totalSentencesRef.current > 0) {
+          // All sentences played
+          if (!isTTSStreamingRef.current) {
+            isTTSStreamingRef.current = true
+            dispatch('SAY_IT_BACK_TRIGGERED')
+          }
+        } else {
+          tryPlayNextTTS()
+        }
+      }
+      dispatch('PLAYBACK_STARTED')
+      audioRef.current.play().catch(() => {
+        isTTSPlayingRef.current = false
+      })
+    }
+  }, [dispatch])
+
+  // XX: Enqueue a TTS sentence
+  const enqueueTTSSentence = useCallback(
+    async (text: string, index: number) => {
+      try {
+        const ttsRes = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            voiceId: voiceGenderRef.current === 'female' ? FEMALE_VOICE_ID : MALE_VOICE_ID,
+          }),
+        })
+        if (!ttsRes.ok) {
+          if (ttsRes.status === 429) {
+            // YY: ElevenLabs rate limit — remove this sentence from queue
+            ttsQueueRef.current = ttsQueueRef.current.filter((item) => item.index !== index)
+            totalSentencesRef.current = Math.max(0, totalSentencesRef.current - 1)
+            if (!isTTSStreamingRef.current && ttsPlayIndexRef.current >= totalSentencesRef.current && totalSentencesRef.current === 0) {
+              isTTSStreamingRef.current = true
+              dispatch('SAY_IT_BACK_TRIGGERED')
+            }
+            return
+          }
+          throw new Error(`TTS error: ${ttsRes.status}`)
+        }
+        const buf = await ttsRes.arrayBuffer()
+        const item = ttsQueueRef.current.find((q) => q.index === index)
+        if (item) {
+          item.blob = buf
+        }
+        tryPlayNextTTS()
+      } catch (err) {
+        console.error('TTS sentence error:', err)
+        // Skip this sentence
+        ttsQueueRef.current = ttsQueueRef.current.filter((item) => item.index !== index)
+        totalSentencesRef.current = Math.max(0, totalSentencesRef.current - 1)
+        if (!isTTSStreamingRef.current && totalSentencesRef.current === 0) {
+          isTTSStreamingRef.current = true
+          dispatch('SAY_IT_BACK_TRIGGERED')
+        }
+      }
+    },
+    [dispatch, tryPlayNextTTS]
+  )
+
+  // ── TTS helper (used for shadow mode / teach me new) ──────────────────────
   const playTTS = useCallback(
     async (text: string, onEnd?: () => void): Promise<void> => {
-      const ttsRes = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voiceId:
-            voiceGenderRef.current === 'female' ? FEMALE_VOICE_ID : MALE_VOICE_ID,
-        }),
-      })
-      const buf = await ttsRes.arrayBuffer()
-      const blob = new Blob([buf], { type: 'audio/mpeg' })
-      const url = URL.createObjectURL(blob)
-      if (audioRef.current) {
-        audioRef.current.src = url
-        audioRef.current.onended = () => {
-          if (onEnd) onEnd()
-          URL.revokeObjectURL(url)
+      try {
+        const ttsRes = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            voiceId:
+              voiceGenderRef.current === 'female' ? FEMALE_VOICE_ID : MALE_VOICE_ID,
+          }),
+        })
+        if (!ttsRes.ok) {
+          if (ttsRes.status === 429) {
+            // YY: Rate limit — skip audio, trigger onEnd
+            if (onEnd) onEnd()
+            return
+          }
+          throw new Error(`TTS error: ${ttsRes.status}`)
         }
-        dispatch('PLAYBACK_STARTED')
-        audioRef.current.play()
+        const buf = await ttsRes.arrayBuffer()
+        // AAA: Store tutor audio
+        tutorAudioBlobRef.current = buf
+        const blob = new Blob([buf], { type: 'audio/mpeg' })
+        const url = URL.createObjectURL(blob)
+        if (audioRef.current) {
+          audioRef.current.src = url
+          audioRef.current.onended = () => {
+            if (onEnd) onEnd()
+            URL.revokeObjectURL(url)
+          }
+          dispatch('PLAYBACK_STARTED')
+          audioRef.current.play().catch(() => {
+            if (onEnd) onEnd()
+          })
+        }
+      } catch (err) {
+        console.error('TTS error:', err)
+        // YY: TTS error — skip audio, continue
+        if (onEnd) onEnd()
       }
     },
     [dispatch]
   )
 
-  // ── Shadow phrase ────────────────────────────────────────────────────────────
+  // ── Shadow phrase ─────────────────────────────────────────────────────────
   const startShadowPhrase = useCallback(async () => {
     const sc = scenarioRef.current
     const shadowPrompt = `You are in SHADOWING MODE for Italian language practice.
@@ -243,12 +402,13 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     }
   }, [dispatch, playTTS])
 
-  // ── Toggle shadow mode ───────────────────────────────────────────────────────
+  // ── Toggle shadow mode ────────────────────────────────────────────────────
   const toggleShadowMode = useCallback(() => {
     const next = !shadowModeRef.current
     setShadowMode(next)
     shadowModeRef.current = next
     if (next) {
+      trackEvent('shadowing_started')
       setAudioState((curr) => {
         if (curr === 'idle') {
           startShadowPhrase()
@@ -258,7 +418,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     }
   }, [startShadowPhrase])
 
-  // ── Teach me something new ───────────────────────────────────────────────────
+  // ── Teach me something new ────────────────────────────────────────────────
   const handleTeachMeNew = useCallback(async () => {
     const sc = scenarioRef.current
     if (!sc || sc.phrases.length === 0) {
@@ -305,10 +465,181 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     }
   }, [dispatch, playTTS])
 
-  // ── Main mic recording ────────────────────────────────────────────────────────
+  // XX: Streaming chat + sentence-by-sentence TTS
+  const handleStreamingChat = useCallback(
+    async (
+      userMsg: ConversationMessage,
+      systemPrompt: string
+    ) => {
+      // Reset streaming state
+      ttsQueueRef.current = []
+      ttsPlayIndexRef.current = 0
+      isTTSPlayingRef.current = false
+      totalSentencesRef.current = 0
+      fullReplyRef.current = ''
+      isTTSStreamingRef.current = false
+
+      dispatch('RESPONSE_RECEIVED')
+
+      let sentenceBuffer = ''
+      let sentenceIndex = 0
+      const sentenceBoundary = /[.!?]["']?\s|[.!?]["']?$/
+
+      const flushSentence = (text: string) => {
+        const trimmed = text.trim()
+        if (trimmed.length >= 10) {
+          const idx = sentenceIndex++
+          totalSentencesRef.current = sentenceIndex
+          ttsQueueRef.current.push({ text: trimmed, index: idx })
+          enqueueTTSSentence(trimmed, idx)
+        }
+      }
+
+      try {
+        const chatRes = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: formatMessagesForAPI([
+              ...messagesRef.current,
+              userMsg,
+            ]),
+            systemPrompt,
+            stream: true,
+          }),
+        })
+
+        if (!chatRes.ok) {
+          throw new Error(`Chat error: ${chatRes.status}`)
+        }
+
+        const contentType = chatRes.headers.get('content-type') || ''
+        if (!contentType.includes('text/event-stream')) {
+          // Fallback to batch response
+          const data = await chatRes.json() as { reply: string }
+          const reply = data.reply
+          fullReplyRef.current = reply
+          const tutorMsg = createMessage('tutor', reply)
+          setMessages((prev) => [...prev, tutorMsg])
+          setSayItBackPhrase(reply)
+          await playTTS(reply, () => dispatch('SAY_IT_BACK_TRIGGERED'))
+          return
+        }
+
+        const reader = chatRes.body?.getReader()
+        if (!reader) throw new Error('No reader')
+        const decoder = new TextDecoder()
+
+        let done = false
+        while (!done) {
+          const result = await reader.read()
+          done = result.done
+          if (result.value) {
+            const chunk = decoder.decode(result.value, { stream: true })
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') {
+                done = true
+                break
+              }
+              try {
+                const parsed = JSON.parse(data) as { token: string }
+                const token = parsed.token
+                fullReplyRef.current += token
+                sentenceBuffer += token
+
+                // Detect sentence boundaries
+                const match = sentenceBoundary.exec(sentenceBuffer)
+                if (match) {
+                  const splitIdx = match.index + match[0].length
+                  const sentence = sentenceBuffer.slice(0, splitIdx)
+                  sentenceBuffer = sentenceBuffer.slice(splitIdx)
+                  flushSentence(sentence)
+                }
+              } catch {
+                // skip malformed SSE
+              }
+            }
+          }
+        }
+
+        // Flush any remaining buffer
+        if (sentenceBuffer.trim().length >= 10) {
+          flushSentence(sentenceBuffer)
+          sentenceBuffer = ''
+        } else if (sentenceBuffer.trim()) {
+          // Short remaining text — append to full reply but skip TTS for it
+          fullReplyRef.current += sentenceBuffer
+        }
+
+        const fullReply = fullReplyRef.current
+        const tutorMsg = createMessage('tutor', fullReply)
+        setMessages((prev) => [...prev, tutorMsg])
+        setSayItBackPhrase(fullReply)
+
+        // If no sentences were enqueued (very short reply), play as single TTS
+        if (totalSentencesRef.current === 0 && fullReply.trim()) {
+          await playTTS(fullReply, () => dispatch('SAY_IT_BACK_TRIGGERED'))
+        }
+      } catch (err) {
+        console.error('Streaming chat error:', err)
+        // YY: Fallback to batch mode
+        try {
+          const chatRes = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: formatMessagesForAPI([
+                ...messagesRef.current,
+                userMsg,
+              ]),
+              systemPrompt,
+            }),
+          })
+          if (!chatRes.ok) {
+            throw new Error(`Chat fallback error: ${chatRes.status}`)
+          }
+          const { reply } = await chatRes.json() as { reply: string }
+          dispatch('RESPONSE_RECEIVED')
+          const tutorMsg = createMessage('tutor', reply)
+          setMessages((prev) => [...prev, tutorMsg])
+          setSayItBackPhrase(reply)
+          await playTTS(reply, () => dispatch('SAY_IT_BACK_TRIGGERED'))
+        } catch (fallbackErr) {
+          console.error('Chat fallback error:', fallbackErr)
+          // YY: OpenRouter error toast
+          showToast('Our tutor is taking a break — try again in a moment', 'error')
+          dispatch('RESET')
+        }
+      }
+    },
+    [dispatch, enqueueTTSSentence, playTTS, showToast]
+  )
+
+  // ── Main mic recording ─────────────────────────────────────────────────────
   const handleMicClick = useCallback(async () => {
+    // AAA: Clear pronunciation compare when starting new recording
+    if (pronunciationAutoTimerRef.current) {
+      clearTimeout(pronunciationAutoTimerRef.current)
+      pronunciationAutoTimerRef.current = null
+    }
+    setShowPronunciationCompare(false)
+
     setAudioState((currentState) => {
       if (currentState === 'recording') {
+        // WW: Close WebSocket when user stops recording
+        if (wsRef.current) {
+          try {
+            wsRef.current.send(JSON.stringify({ type: 'stop' }))
+            wsRef.current.close()
+          } catch {
+            // ignore
+          }
+          wsRef.current = null
+        }
         mediaRecorderRef.current?.stop()
         return transition(currentState, 'STOP_RECORDING')
       }
@@ -317,9 +648,54 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
 
     setAudioState((currentState) => {
       if (currentState === 'idle' || currentState === 'say-it-back') {
+        const isSayItBackMode = currentState === 'say-it-back'
+
+        // AAA: Reset user audio when starting say-it-back recording
+        if (isSayItBackMode) {
+          userAudioBlobRef.current = null
+        }
+
         navigator.mediaDevices
           .getUserMedia({ audio: true })
           .then((stream) => {
+            // WW: Reset transcript refs
+            finalTranscriptRef.current = ''
+            interimTranscriptRef.current = ''
+            setInterimTranscript('')
+
+            // WW: Open WebSocket for streaming transcription
+            try {
+              const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+              const wsUrl = `${wsProto}//${window.location.hostname}:3003/api/transcribe-ws`
+              const ws = new WebSocket(wsUrl)
+              wsRef.current = ws
+
+              ws.onmessage = (event) => {
+                try {
+                  const data = JSON.parse(event.data as string) as {
+                    transcript: string
+                    isFinal: boolean
+                    speechFinal: boolean
+                  }
+                  if (data.transcript) {
+                    setInterimTranscript(data.transcript)
+                    interimTranscriptRef.current = data.transcript
+                    if (data.speechFinal) {
+                      finalTranscriptRef.current = data.transcript
+                    }
+                  }
+                } catch {
+                  // ignore parse errors
+                }
+              }
+
+              ws.onerror = () => {
+                // WS failed — will fall back to /api/transcribe
+              }
+            } catch {
+              // WS not available, will use fallback
+            }
+
             const mimeType = MediaRecorder.isTypeSupported('audio/webm')
               ? 'audio/webm'
               : 'audio/ogg'
@@ -328,77 +704,111 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
             audioChunksRef.current = []
 
             mediaRecorder.ondataavailable = (e) => {
-              if (e.data.size > 0) audioChunksRef.current.push(e.data)
+              if (e.data.size > 0) {
+                audioChunksRef.current.push(e.data)
+                // WW: Stream audio chunk to WebSocket
+                if (wsRef.current?.readyState === WebSocket.OPEN) {
+                  wsRef.current.send(e.data)
+                }
+              }
             }
 
             mediaRecorder.onstop = async () => {
               stream.getTracks().forEach((t) => t.stop())
-              const audioBlob = new Blob(audioChunksRef.current, {
-                type: 'audio/webm',
-              })
+              setInterimTranscript('')
 
-              try {
-                const formData = new FormData()
-                formData.append('audio', audioBlob, 'recording.webm')
-                const res = await fetch('/api/transcribe', {
-                  method: 'POST',
-                  body: formData,
-                })
-                const { transcript } = await res.json() as { transcript: string }
+              // AAA: Save user audio if in say-it-back mode
+              if (isSayItBackMode) {
+                userAudioBlobRef.current = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+              }
 
-                if (!transcript?.trim()) {
+              // WW: Use WS transcript if available, otherwise fall back to /api/transcribe
+              const wsTranscript = finalTranscriptRef.current || interimTranscriptRef.current
+              let transcript = wsTranscript
+
+              if (!transcript?.trim()) {
+                // Fallback: POST to /api/transcribe
+                try {
+                  const audioBlob = new Blob(audioChunksRef.current, {
+                    type: 'audio/webm',
+                  })
+                  const formData = new FormData()
+                  formData.append('audio', audioBlob, 'recording.webm')
+                  const res = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    body: formData,
+                  })
+                  if (!res.ok) {
+                    throw new Error(`Transcribe error: ${res.status}`)
+                  }
+                  const data = await res.json() as { transcript: string }
+                  transcript = data.transcript
+                } catch (err) {
+                  console.error('Transcription fallback error:', err)
+                  // YY: Transcription error toast
+                  showToast('Having trouble hearing you — try again', 'error')
                   dispatch('RESET')
                   return
                 }
-
-                const userMsg = createMessage('user', transcript)
-                setMessages((prev) => [...prev, userMsg])
-
-                // Shadow mode: just show transcript, then start next phrase
-                if (shadowModeRef.current) {
-                  await startShadowPhrase()
-                  return
-                }
-
-                // Normal conversation flow
-                const systemPrompt = isRoleplay
-                  ? roleplayChar.prompt
-                  : generateSystemPrompt(
-                      scenarioRef.current,
-                      voiceGenderRef.current
-                    )
-
-                const chatRes = await fetch('/api/chat', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    messages: formatMessagesForAPI([
-                      ...messagesRef.current,
-                      userMsg,
-                    ]),
-                    systemPrompt,
-                  }),
-                })
-
-                const { reply } = await chatRes.json() as { reply: string }
-                dispatch('RESPONSE_RECEIVED')
-
-                const tutorMsg = createMessage('tutor', reply)
-                setMessages((prev) => [...prev, tutorMsg])
-                setSayItBackPhrase(reply)
-
-                await playTTS(reply, () => dispatch('SAY_IT_BACK_TRIGGERED'))
-              } catch (err) {
-                console.error('Pipeline error:', err)
-                dispatch('RESET')
               }
+
+              if (!transcript?.trim()) {
+                dispatch('RESET')
+                return
+              }
+
+              // Analytics: track first message
+              if (!conversationStartedTracked.current) {
+                conversationStartedTracked.current = true
+                trackEvent('conversation_started')
+              }
+
+              const userMsg = createMessage('user', transcript)
+              setMessages((prev) => [...prev, userMsg])
+
+              // AAA: Show pronunciation compare if in say-it-back mode with saved audio
+              if (isSayItBackMode && userAudioBlobRef.current && tutorAudioBlobRef.current) {
+                setShowPronunciationCompare(true)
+                if (pronunciationAutoTimerRef.current) {
+                  clearTimeout(pronunciationAutoTimerRef.current)
+                }
+                pronunciationAutoTimerRef.current = setTimeout(() => {
+                  setShowPronunciationCompare(false)
+                }, 10000)
+              }
+
+              // Shadow mode: just show transcript, then start next phrase
+              if (shadowModeRef.current) {
+                await startShadowPhrase()
+                return
+              }
+
+              // Normal conversation flow
+              const systemPrompt = isRoleplay
+                ? roleplayChar.prompt
+                : generateSystemPrompt(
+                    scenarioRef.current,
+                    voiceGenderRef.current
+                  )
+
+              await handleStreamingChat(userMsg, systemPrompt)
             }
 
             mediaRecorder.start(100)
             dispatch('START_RECORDING')
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             console.error('Mic error:', err)
+            // YY: Mic permission denied
+            if (
+              err instanceof DOMException &&
+              (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+            ) {
+              showToast(
+                'Mic access denied — go to Settings → Safari → Microphone to enable',
+                'warning'
+              )
+            }
             dispatch('RESET')
           })
 
@@ -406,7 +816,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
       }
       return currentState
     })
-  }, [dispatch, isRoleplay, roleplayChar, startShadowPhrase, playTTS])
+  }, [dispatch, isRoleplay, roleplayChar, startShadowPhrase, handleStreamingChat, showToast])
 
   const toggleVoiceGender = () => {
     const next: VoiceGender = voiceGender === 'female' ? 'male' : 'female'
@@ -433,6 +843,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
       scenarioTitle: scenario.title,
     })
 
+    trackEvent('phrase_bookmarked')
     setBookmarkedIds((prev) => new Set([...prev, msg.id]))
   }
 
@@ -450,13 +861,19 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
               voiceGenderRef.current === 'female' ? FEMALE_VOICE_ID : MALE_VOICE_ID,
           }),
         })
+        if (!res.ok) {
+          if (res.status === 429) return // YY: rate limit, skip silently
+          throw new Error(`TTS error: ${res.status}`)
+        }
         const buf = await res.arrayBuffer()
+        // AAA: Store tutor audio
+        tutorAudioBlobRef.current = buf
         const blob = new Blob([buf], { type: 'audio/mpeg' })
         const url = URL.createObjectURL(blob)
         if (audioRef.current) {
           audioRef.current.src = url
           audioRef.current.onended = () => URL.revokeObjectURL(url)
-          audioRef.current.play()
+          audioRef.current.play().catch(() => {})
         }
       } catch {
         // ignore
@@ -464,6 +881,33 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     },
     [audioState]
   )
+
+  // AAA: Play user recording
+  const playUserAudio = () => {
+    if (!userAudioBlobRef.current) return
+    try {
+      const url = URL.createObjectURL(userAudioBlobRef.current)
+      const audio = new Audio(url)
+      audio.onended = () => URL.revokeObjectURL(url)
+      audio.play().catch(() => {})
+    } catch {
+      // ignore
+    }
+  }
+
+  // AAA: Play tutor recording
+  const playTutorAudio = () => {
+    if (!tutorAudioBlobRef.current) return
+    try {
+      const blob = new Blob([tutorAudioBlobRef.current], { type: 'audio/mpeg' })
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audio.onended = () => URL.revokeObjectURL(url)
+      audio.play().catch(() => {})
+    } catch {
+      // ignore
+    }
+  }
 
   // Panic button recording
   const startPanicRecording = async () => {
@@ -491,6 +935,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
             method: 'POST',
             body: fd,
           })
+          if (!tRes.ok) throw new Error(`Transcribe error: ${tRes.status}`)
           const { transcript } = await tRes.json() as { transcript: string }
           if (!transcript?.trim()) {
             setPanicState('idle')
@@ -506,6 +951,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
               systemPrompt: panicPrompt,
             }),
           })
+          if (!cRes.ok) throw new Error(`Chat error: ${cRes.status}`)
           const { reply } = await cRes.json() as { reply: string }
           setPanicAnswer(reply)
           setPanicState('idle')
@@ -513,15 +959,24 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           const userMsg = createMessage('user', `[Quick Help] ${transcript}`)
           const tutorMsg = createMessage('tutor', reply)
           setMessages((prev) => [...prev, userMsg, tutorMsg])
-        } catch {
+        } catch (err) {
+          console.error('Panic error:', err)
           setPanicState('idle')
+          showToast('Having trouble hearing you — try again', 'error')
         }
       }
 
       recorder.start(100)
       setPanicState('recording')
-    } catch {
+    } catch (err) {
+      console.error('Panic mic error:', err)
       setPanicState('idle')
+      if (
+        err instanceof DOMException &&
+        (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+      ) {
+        showToast('Mic access denied — go to Settings → Safari → Microphone to enable', 'warning')
+      }
     }
   }
 
@@ -559,6 +1014,13 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     ? `${scenario.emoji} ${scenario.title}`
     : '💬 Freestyle'
 
+  // YY: Toast background colors
+  const toastBg = (type: 'error' | 'info' | 'warning') => {
+    if (type === 'error') return '#c0392b'
+    if (type === 'warning') return '#d4a017'
+    return '#0a84ff'
+  }
+
   return (
     <div
       style={{
@@ -571,6 +1033,78 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         position: 'relative',
       }}
     >
+      {/* YY: Offline banner — fixed at very top */}
+      {isOffline && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            maxWidth: 600,
+            background: '#e67e22',
+            color: 'white',
+            fontSize: 14,
+            fontWeight: 600,
+            padding: '10px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            zIndex: 200,
+          }}
+        >
+          <span>You&apos;re offline — emergency phrasebook still works</span>
+          <a
+            href="/emergency"
+            style={{
+              color: 'white',
+              textDecoration: 'underline',
+              marginLeft: 12,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Open →
+          </a>
+        </div>
+      )}
+
+      {/* YY: Toast notifications */}
+      <div
+        style={{
+          position: 'fixed',
+          top: isOffline ? 52 : 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '90%',
+          maxWidth: 540,
+          zIndex: 300,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            style={{
+              background: toastBg(toast.type),
+              color: 'white',
+              borderRadius: 10,
+              padding: '12px 16px',
+              fontSize: 14,
+              fontWeight: 500,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              textAlign: 'center',
+            }}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
+
       {/* Header */}
       <div
         style={{
@@ -579,6 +1113,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           justifyContent: 'space-between',
           padding: '16px',
           borderBottom: '1px solid #1a1a1a',
+          marginTop: isOffline ? 44 : 0,
         }}
       >
         <button
@@ -887,6 +1422,57 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           </div>
         )}
 
+        {/* AAA: Pronunciation compare card */}
+        {showPronunciationCompare && userAudioBlobRef.current && tutorAudioBlobRef.current && (
+          <div
+            style={{
+              background: '#0a1a2a',
+              border: '1px solid #1a3a5a',
+              borderRadius: 12,
+              padding: '14px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 14, color: '#5a9adf', marginBottom: 10, fontWeight: 600 }}>
+              🎧 Compare pronunciation
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={playUserAudio}
+                style={{
+                  background: '#1a2a3a',
+                  border: '1px solid #2a4a6a',
+                  borderRadius: 10,
+                  padding: '10px 18px',
+                  color: '#8ac0f0',
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  minHeight: 44,
+                }}
+              >
+                🔊 You
+              </button>
+              <button
+                onClick={playTutorAudio}
+                style={{
+                  background: '#1a2a3a',
+                  border: '1px solid #2a4a6a',
+                  borderRadius: 10,
+                  padding: '10px 18px',
+                  color: '#8ac0f0',
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  minHeight: 44,
+                }}
+              >
+                🔊 Tutor
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Roleplay "finish" prompt */}
         {hasEnoughForRoleplaySummary && !showRoleplaySummary && (
           <div
@@ -986,6 +1572,22 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         >
           {isRecording ? '⏹' : '🎤'}
         </button>
+
+        {/* WW: Interim transcript display */}
+        {isRecording && interimTranscript && (
+          <div
+            style={{
+              fontSize: 14,
+              color: '#888',
+              fontStyle: 'italic',
+              textAlign: 'center',
+              maxWidth: 300,
+              lineHeight: 1.4,
+            }}
+          >
+            {interimTranscript}
+          </div>
+        )}
 
         <div style={{ fontSize: 14, color: '#666' }}>
           {isRecording

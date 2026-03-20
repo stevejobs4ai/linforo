@@ -6,6 +6,9 @@ import { SCENARIOS } from '@/lib/scenarios'
 import { isOnboardingComplete } from '@/lib/onboarding'
 import { shouldShowAccountNudge } from '@/lib/conversationCount'
 import { computeReadiness } from '@/lib/readiness'
+import { hasSeenInterests } from '@/lib/interests'
+import { getTodayPrompt, hasSeenTodayPrompt, markPromptSeen, isDailyPromptCompleted } from '@/lib/dailyPrompt'
+import { trackEvent } from '@/lib/analytics'
 import Onboarding from '@/components/Onboarding'
 
 const ROLEPLAY_CHARACTERS = [
@@ -92,21 +95,42 @@ export default function ScenarioPicker() {
   const [showNudge, setShowNudge] = useState(false)
   const [readiness, setReadiness] = useState(0)
   const [showRoleplayPicker, setShowRoleplayPicker] = useState(false)
+  const [dailyPrompt, setDailyPrompt] = useState<ReturnType<typeof getTodayPrompt> | null>(null)
+  const [dailyDone, setDailyDone] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     if (!isOnboardingComplete()) {
       setShowOnboarding(true)
-    } else if (shouldShowAccountNudge()) {
-      setShowNudge(true)
+    } else {
+      // After onboarding, show interests screen if never set
+      if (!hasSeenInterests()) {
+        router.push('/interests')
+        return
+      }
+      if (shouldShowAccountNudge()) setShowNudge(true)
     }
     setReadiness(computeReadiness())
-  }, [])
+
+    // Daily prompt
+    const prompt = getTodayPrompt()
+    setDailyPrompt(prompt)
+    setDailyDone(isDailyPromptCompleted())
+    if (!hasSeenTodayPrompt()) {
+      markPromptSeen()
+    }
+  }, [router])
 
   const handleOnboardingComplete = (voiceGender: 'female' | 'male') => {
     void voiceGender
     setShowOnboarding(false)
     setReadiness(computeReadiness())
+    trackEvent('onboarding_completed')
+    // Show interests screen
+    if (!hasSeenInterests()) {
+      router.push('/interests')
+      return
+    }
     if (shouldShowAccountNudge()) setShowNudge(true)
   }
 
@@ -115,12 +139,20 @@ export default function ScenarioPicker() {
       setShowRoleplayPicker(true)
       return
     }
+    trackEvent('scenario_selected', { scenario: id })
     router.push(`/voice?scenario=${id}`)
   }
 
   const handleRoleplayCharacter = (characterId: string) => {
     setShowRoleplayPicker(false)
+    trackEvent('roleplay_started', { character: characterId })
     router.push(`/voice?scenario=roleplay&character=${characterId}`)
+  }
+
+  const handleDailyPrompt = () => {
+    if (!dailyPrompt) return
+    trackEvent('scenario_selected', { scenario: dailyPrompt.scenario, source: 'daily_prompt' })
+    router.push(`/voice?scenario=${dailyPrompt.scenario}&dailyContext=${encodeURIComponent(dailyPrompt.context)}`)
   }
 
   if (!mounted) {
@@ -150,7 +182,7 @@ export default function ScenarioPicker() {
           }}
         >
           <button
-            onClick={() => router.push('/emergency')}
+            onClick={() => { trackEvent('emergency_opened'); router.push('/emergency') }}
             style={{
               background: '#1a0a0a',
               border: '1px solid #3a1a1a',
@@ -211,8 +243,73 @@ export default function ScenarioPicker() {
           Choose a scenario to practice
         </p>
 
+        {/* Interests & settings link */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <button
+            onClick={() => router.push('/interests')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#555',
+              fontSize: 13,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            ✨ My interests
+          </button>
+        </div>
+
         {/* Travel Readiness Ring */}
         <ReadinessRing readiness={readiness} />
+
+        {/* Daily challenge card */}
+        {dailyPrompt && !dailyDone && (
+          <button
+            onClick={handleDailyPrompt}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #1a2a0a 0%, #1e300e 100%)',
+              border: '1px solid #3a5a1a',
+              borderRadius: 16,
+              padding: '18px 20px',
+              marginBottom: 16,
+              cursor: 'pointer',
+              textAlign: 'left',
+              minHeight: 48,
+            }}
+          >
+            <div style={{ fontSize: 13, color: '#7adf4a', fontWeight: 600, marginBottom: 4 }}>
+              🎯 TODAY&apos;S CHALLENGE
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'white' }}>
+              {dailyPrompt.text}
+            </div>
+            <div style={{ fontSize: 13, color: '#7a9a4a', marginTop: 4 }}>
+              Tap to start this conversation →
+            </div>
+          </button>
+        )}
+
+        {dailyPrompt && dailyDone && (
+          <div
+            style={{
+              background: '#0a1a0a',
+              border: '1px solid #1a3a1a',
+              borderRadius: 16,
+              padding: '14px 20px',
+              marginBottom: 16,
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ fontSize: 13, color: '#4caf50', fontWeight: 600 }}>
+              ✅ TODAY&apos;S CHALLENGE DONE
+            </div>
+            <div style={{ fontSize: 14, color: '#555', marginTop: 2 }}>
+              {dailyPrompt.text}
+            </div>
+          </div>
+        )}
 
         {/* Account nudge banner */}
         {showNudge && (
