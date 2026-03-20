@@ -1324,9 +1324,9 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     ? `${scenario.emoji} ${scenario.title}`
     : '💬 Freestyle'
 
-  // Detect Nonna persona to hide gender toggle
-  const isNonnaPersona = typeof window !== 'undefined' &&
-    localStorage.getItem('linforo-persona') === 'nonna'
+  // Hide gender toggle when ANY persona is selected (persona defines the voice)
+  const hasPersona = typeof window !== 'undefined' &&
+    !!localStorage.getItem('linforo-persona')
 
   // YY: Toast background colors
   const toastBg = (type: 'error' | 'info' | 'warning') => {
@@ -1519,7 +1519,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                   disabled: false,
                   active: false,
                 },
-                ...(!isNonnaPersona ? [{
+                ...(!hasPersona ? [{
                   label: voiceGender === 'female' ? '♀ Female voice' : '♂ Male voice',
                   action: () => { toggleVoiceGender(); setMenuOpen(false) },
                   disabled: false,
