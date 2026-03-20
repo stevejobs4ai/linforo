@@ -10,6 +10,7 @@ import { hasSeenInterests } from '@/lib/interests'
 import { getTodayPrompt, hasSeenTodayPrompt, markPromptSeen, isDailyPromptCompleted } from '@/lib/dailyPrompt'
 import { trackEvent } from '@/lib/analytics'
 import Onboarding from '@/components/Onboarding'
+import PresenceBanner from '@/components/PresenceBanner'
 
 const ROLEPLAY_CHARACTERS = [
   { id: 'waiter', emoji: '🍝', label: 'Waiter', description: 'Trattoria in Rome' },
@@ -212,24 +213,62 @@ export default function ScenarioPicker() {
             🇮🇹 Linforo
           </h1>
 
-          <button
-            onClick={() => router.push('/history')}
-            style={{
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 20,
-              width: 48,
-              height: 48,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 22,
-              cursor: 'pointer',
-            }}
-            aria-label="Conversation history"
-          >
-            🕐
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => router.push('/community')}
+              style={{
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: 20,
+                width: 44,
+                height: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+                cursor: 'pointer',
+              }}
+              aria-label="Community"
+            >
+              👥
+            </button>
+            <button
+              onClick={() => router.push('/profile')}
+              style={{
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: 20,
+                width: 44,
+                height: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+                cursor: 'pointer',
+              }}
+              aria-label="Profile"
+            >
+              👤
+            </button>
+            <button
+              onClick={() => router.push('/history')}
+              style={{
+                background: '#1a1a1a',
+                border: '1px solid #333',
+                borderRadius: 20,
+                width: 44,
+                height: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 20,
+                cursor: 'pointer',
+              }}
+              aria-label="Conversation history"
+            >
+              🕐
+            </button>
+          </div>
         </div>
 
         <p
@@ -259,6 +298,9 @@ export default function ScenarioPicker() {
             ✨ My interests
           </button>
         </div>
+
+        {/* Live presence banner */}
+        <PresenceBanner />
 
         {/* Travel Readiness Ring */}
         <ReadinessRing readiness={readiness} />
