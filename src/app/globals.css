@@ -2,35 +2,43 @@
 
 /* ── CSS Variables: Dark theme (default) ──────────────────────────────────── */
 :root {
-  --bg: #0a0a0a;
-  --card: #111;
-  --card2: #1a1a1a;
-  --border: #222;
-  --border2: #333;
-  --text: #ffffff;
-  --text-muted: #888;
-  --text-dim: #666;
-  --text-faint: #444;
-  --shadow: none;
+  --bg: #1a1410;
+  --card: #241e18;
+  --card2: #2e2620;
+  --border: #3d342a;
+  --border2: #4d4035;
+  --text: #f5efe6;
+  --text-muted: #a09080;
+  --text-dim: #7a6a5a;
+  --text-faint: #5a4a3a;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --accent: #c4703f;
+  --accent2: #7c9a5e;
+  --accent3: #d4a843;
+  --accent-glow: rgba(196, 112, 63, 0.3);
 }
 
 /* ── CSS Variables: Light theme ───────────────────────────────────────────── */
 .light-theme {
-  --bg: #fafafa;
+  --bg: #faf6f0;
   --card: #ffffff;
-  --card2: #f0f0f0;
-  --border: #e0e0e0;
-  --border2: #cccccc;
-  --text: #1a1a1a;
-  --text-muted: #555555;
-  --text-dim: #777777;
-  --text-faint: #999999;
-  --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --card2: #f5efe6;
+  --border: #e0d5c5;
+  --border2: #cfc3b0;
+  --text: #2a1f14;
+  --text-muted: #7a6050;
+  --text-dim: #9a8070;
+  --text-faint: #baa090;
+  --shadow: 0 2px 12px rgba(42, 31, 20, 0.08);
+  --accent: #c4703f;
+  --accent2: #5a7a3e;
+  --accent3: #b8932e;
+  --accent-glow: rgba(196, 112, 63, 0.15);
 }
 
 :root {
-  --font-sans: 'DM Sans', sans-serif;
-  --font-heading: 'Playfair Display', serif;
+  --font-sans: 'Source Sans 3', sans-serif;
+  --font-heading: 'Cormorant Garamond', serif;
 }
 
 * {
@@ -45,8 +53,97 @@ body {
   overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
+  font-family: var(--font-sans);
 }
 
+/* ── Noise/grain texture overlay ─────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+/* ── Page fade-in ─────────────────────────────────────────────────────────── */
+@keyframes page-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: page-fadein 0.25s ease forwards;
+}
+
+/* ── Card hover scale ─────────────────────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card-hover:hover, .card-hover:active {
+  transform: scale(1.02);
+}
+
+/* ── Stagger reveal ───────────────────────────────────────────────────────── */
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stagger-item {
+  animation: stagger-in 0.3s ease forwards;
+  opacity: 0;
+}
+
+/* ── Mic button animations ────────────────────────────────────────────────── */
+
+/* Idle breathing */
+@keyframes mic-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 8px 40px rgba(196, 112, 63, 0.35); }
+  50% { transform: scale(1.04); box-shadow: 0 12px 48px rgba(196, 112, 63, 0.55); }
+}
+
+.mic-idle {
+  animation: mic-breathe 3s ease-in-out infinite;
+}
+
+/* Recording red glow pulse */
+@keyframes mic-record-glow {
+  0% { box-shadow: 0 0 0 0 rgba(220, 60, 40, 0.7), 0 8px 32px rgba(220, 60, 40, 0.4); }
+  70% { box-shadow: 0 0 0 28px rgba(220, 60, 40, 0), 0 8px 32px rgba(220, 60, 40, 0.15); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 60, 40, 0), 0 8px 32px rgba(220, 60, 40, 0.4); }
+}
+
+.mic-recording-glow {
+  animation: mic-record-glow 1.5s ease-in-out infinite;
+}
+
+/* Legacy pulse for compatibility */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(220, 60, 40, 0.4); }
+  70% { box-shadow: 0 0 0 20px rgba(220, 60, 40, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 60, 40, 0); }
+}
+
+.mic-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* VAD: olive green pulsing ring when listening hands-free */
+@keyframes vad-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(124, 154, 94, 0.6); }
+  70% { box-shadow: 0 0 0 20px rgba(124, 154, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 154, 94, 0); }
+}
+
+.vad-listening {
+  animation: vad-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Pulse ring (for VAD/recording indicators) ────────────────────────────── */
 @keyframes pulse-ring {
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(1.5); opacity: 0; }
@@ -70,33 +167,21 @@ body {
   animation: pulse-ring 1.2s ease-out infinite 0.4s;
 }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(255, 59, 48, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+/* ── Toast slide-up ───────────────────────────────────────────────────────── */
+@keyframes toast-slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.mic-pulse {
-  animation: pulse 1.5s ease-in-out infinite;
+.toast-enter {
+  animation: toast-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* VAD: green pulsing ring when listening hands-free */
-@keyframes vad-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); }
-  70% { box-shadow: 0 0 0 18px rgba(52, 199, 89, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+/* ── Smooth button transitions ────────────────────────────────────────────── */
+button {
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
-.vad-listening {
-  animation: vad-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes mic-glow {
-  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.6), 0 8px 32px rgba(255,59,48,0.3); }
-  70% { box-shadow: 0 0 0 24px rgba(255, 59, 48, 0), 0 8px 32px rgba(255,59,48,0.1); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0), 0 8px 32px rgba(255,59,48,0.3); }
-}
-
-.mic-recording-glow {
-  animation: mic-glow 1.5s ease-in-out infinite;
+button:active {
+  transform: scale(0.97);
 }

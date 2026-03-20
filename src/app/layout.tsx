@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Playfair_Display } from 'next/font/google'
+import { Cormorant_Garamond, Source_Sans_3 } from 'next/font/google'
 import Script from 'next/script'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans' })
-const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-heading' })
+const sourceSans = Source_Sans_3({ subsets: ['latin'], variable: '--font-sans', weight: ['300', '400', '600', '700'] })
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], variable: '--font-heading', weight: ['400', '500', '600', '700'] })
 
 export const metadata: Metadata = {
   title: 'Linforo — Learn Italian by Speaking',
@@ -37,14 +37,14 @@ export default function RootLayout({
   return (
     <ClerkProvider
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      appearance={{ variables: { colorBackground: '#0a0a0a', colorText: '#ffffff' } }}
+      appearance={{ variables: { colorBackground: '#1a1410', colorText: '#f5efe6' } }}
     >
       <html lang="en">
         <head>
           {/* Apply theme before paint to avoid flash */}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
-        <body className={`${dmSans.variable} ${playfair.variable} ${dmSans.className}`}>
+        <body className={`${sourceSans.variable} ${cormorant.variable} ${sourceSans.className}`}>
           {children}
           {/* Plausible analytics */}
           <Script

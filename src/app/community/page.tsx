@@ -26,7 +26,7 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
     <img
       src={url}
       alt={name}
-      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
+      style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }}
     />
   ) : (
     <div
@@ -34,13 +34,15 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
         width: 40,
         height: 40,
         borderRadius: '50%',
-        background: '#1a3a5a',
+        background: 'rgba(196,112,63,0.15)',
+        border: '2px solid rgba(196,112,63,0.3)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#0a84ff',
+        color: 'var(--accent)',
         fontWeight: 700,
         fontSize: 16,
+        flexShrink: 0,
       }}
     >
       {name[0]?.toUpperCase()}
@@ -83,30 +85,32 @@ function CompletionCard({ entry, currentUserId }: { entry: FeedEntry; currentUse
   return (
     <div
       style={{
-        background: '#111',
-        border: '1px solid #222',
-        borderRadius: 16,
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        borderRadius: 18,
         padding: 20,
         marginBottom: 16,
+        boxShadow: 'var(--shadow)',
       }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <Avatar url={entry.users.photo_url} name={entry.users.display_name} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, color: 'white', fontSize: 15 }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, fontFamily: 'var(--font-heading)' }}>
             {entry.users.display_name}
           </div>
-          <div style={{ fontSize: 13, color: '#888' }}>{timeAgo(entry.completed_at)}</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{timeAgo(entry.completed_at)}</div>
         </div>
       </div>
 
       <div
         style={{
           fontSize: 15,
-          color: '#ccc',
+          color: 'var(--text)',
           marginBottom: 14,
           paddingLeft: 4,
+          lineHeight: 1.5,
         }}
       >
         {resultLabel}
@@ -128,16 +132,17 @@ function CompletionCard({ entry, currentUserId }: { entry: FeedEntry; currentUse
               <Avatar url={c.users?.photo_url ?? null} name={c.users?.display_name ?? '?'} />
               <div
                 style={{
-                  background: '#1a1a1a',
-                  borderRadius: 10,
+                  background: 'var(--card2)',
+                  borderRadius: 12,
                   padding: '8px 12px',
                   flex: 1,
+                  border: '1px solid var(--border)',
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#aaa', marginBottom: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 2 }}>
                   {c.users?.display_name}
                 </div>
-                <div style={{ fontSize: 14, color: '#ddd' }}>{c.text}</div>
+                <div style={{ fontSize: 14, color: 'var(--text)' }}>{c.text}</div>
               </div>
             </div>
           ))}
@@ -155,25 +160,26 @@ function CompletionCard({ entry, currentUserId }: { entry: FeedEntry; currentUse
             maxLength={280}
             style={{
               flex: 1,
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 10,
+              background: 'var(--card2)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
               padding: '8px 12px',
-              color: 'white',
+              color: 'var(--text)',
               fontSize: 14,
               outline: 'none',
+              fontFamily: 'inherit',
             }}
           />
           <button
             onClick={postComment}
             disabled={posting || !comment.trim()}
             style={{
-              background: '#0a84ff',
+              background: 'var(--accent)',
               border: 'none',
-              borderRadius: 10,
-              padding: '8px 14px',
+              borderRadius: 12,
+              padding: '8px 16px',
               color: 'white',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: posting ? 'not-allowed' : 'pointer',
               opacity: posting || !comment.trim() ? 0.5 : 1,
               fontSize: 14,
@@ -197,7 +203,6 @@ export default function CommunityPage() {
   const currentDbUserId = useRef<string | null>(null)
 
   useEffect(() => {
-    // Resolve clerk user → supabase user id
     if (user) {
       supabase
         .from('users')
@@ -224,7 +229,6 @@ export default function CommunityPage() {
 
     loadFeed()
 
-    // Real-time subscription for new completions
     const channel = supabase
       .channel('community-feed')
       .on(
@@ -251,7 +255,10 @@ export default function CommunityPage() {
   }, [])
 
   return (
-    <main style={{ background: '#0a0a0a', minHeight: '100vh', padding: '24px 16px' }}>
+    <main
+      className="page-enter"
+      style={{ background: 'var(--bg)', minHeight: '100vh', padding: '24px 20px' }}
+    >
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         {/* Header */}
         <div
@@ -265,47 +272,48 @@ export default function CommunityPage() {
           <button
             onClick={() => router.back()}
             style={{
-              background: '#1a1a1a',
-              border: '1px solid #333',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
               borderRadius: 20,
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 18,
               cursor: 'pointer',
-              color: 'white',
+              color: 'var(--text)',
             }}
             aria-label="Go back"
           >
             ←
           </button>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: 0 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'var(--font-heading)' }}>
             👥 Community
           </h1>
         </div>
 
-        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20, lineHeight: 1.5 }}>
           Real-time completions from learners around the world
         </p>
 
         {loading && (
-          <div style={{ color: '#555', textAlign: 'center', padding: 40 }}>Loading…</div>
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 40 }}>Loading…</div>
         )}
 
         {!loading && feed.length === 0 && (
           <div>
             <div
               style={{
-                background: '#1a1a0a',
-                border: '1px solid #3a3a1a',
-                borderRadius: 12,
+                background: 'rgba(212,168,67,0.1)',
+                border: '1px solid rgba(212,168,67,0.25)',
+                borderRadius: 14,
                 padding: '10px 16px',
                 marginBottom: 16,
                 fontSize: 13,
-                color: '#aaa888',
+                color: 'var(--accent3)',
                 textAlign: 'center',
+                fontWeight: 600,
               }}
             >
               Preview — sign up to join the community
@@ -318,12 +326,13 @@ export default function CommunityPage() {
               <div
                 key={entry.name}
                 style={{
-                  background: '#111',
-                  border: '1px solid #222',
-                  borderRadius: 16,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 18,
                   padding: 20,
                   marginBottom: 16,
-                  opacity: 0.75,
+                  opacity: 0.7,
+                  boxShadow: 'var(--shadow)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
@@ -332,11 +341,12 @@ export default function CommunityPage() {
                       width: 40,
                       height: 40,
                       borderRadius: '50%',
-                      background: '#1a3a5a',
+                      background: 'rgba(196,112,63,0.15)',
+                      border: '2px solid rgba(196,112,63,0.3)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#0a84ff',
+                      color: 'var(--accent)',
                       fontWeight: 700,
                       fontSize: 16,
                     }}
@@ -344,11 +354,11 @@ export default function CommunityPage() {
                     {entry.initial}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, color: 'white', fontSize: 15 }}>{entry.name}</div>
-                    <div style={{ fontSize: 13, color: '#888' }}>{entry.time}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15, fontFamily: 'var(--font-heading)' }}>{entry.name}</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{entry.time}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 15, color: '#ccc' }}>{entry.text}</div>
+                <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.5 }}>{entry.text}</div>
               </div>
             ))}
           </div>

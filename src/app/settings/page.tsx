@@ -132,7 +132,7 @@ export default function SettingsPage() {
             <button
               onClick={handleThemeToggle}
               style={{
-                background: theme === 'dark' ? '#1c1c1e' : '#e0e0e0',
+                background: theme === 'dark' ? 'var(--card2)' : 'var(--border)',
                 border: '1px solid var(--border2)',
                 borderRadius: 24,
                 width: 52,
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                   width: 24,
                   height: 24,
                   borderRadius: '50%',
-                  background: theme === 'dark' ? '#555' : '#0a84ff',
+                  background: theme === 'dark' ? 'var(--border2)' : 'var(--accent)',
                   transition: 'left 0.2s',
                   display: 'flex',
                   alignItems: 'center',
@@ -174,8 +174,8 @@ export default function SettingsPage() {
               key={persona.id}
               onClick={() => handlePersonaChange(persona.id)}
               style={{
-                background: selectedPersona === persona.id ? '#0a84ff22' : 'var(--card)',
-                border: `2px solid ${selectedPersona === persona.id ? '#0a84ff' : 'var(--border)'}`,
+                background: selectedPersona === persona.id ? 'rgba(196,112,63,0.1)' : 'var(--card)',
+                border: `2px solid ${selectedPersona === persona.id ? 'var(--accent)' : 'var(--border)'}`,
                 borderRadius: 14,
                 padding: '14px 16px',
                 display: 'flex',
@@ -193,7 +193,7 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{persona.tagline}</div>
               </div>
               {selectedPersona === persona.id && (
-                <span style={{ marginLeft: 'auto', color: '#0a84ff', fontSize: 18 }}>✓</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--accent)', fontSize: 18, fontWeight: 700 }}>✓</span>
               )}
             </button>
           ))}
@@ -219,8 +219,8 @@ export default function SettingsPage() {
             <button
               onClick={handleReminderToggle}
               style={{
-                background: reminderEnabled ? '#0a84ff' : 'var(--card2)',
-                border: `1px solid ${reminderEnabled ? '#0a84ff' : 'var(--border2)'}`,
+                background: reminderEnabled ? 'var(--accent)' : 'var(--card2)',
+                border: `1px solid ${reminderEnabled ? 'var(--accent)' : 'var(--border2)'}`,
                 borderRadius: 24,
                 width: 52,
                 height: 30,
@@ -269,7 +269,7 @@ export default function SettingsPage() {
               style={{
                 marginTop: 10,
                 fontSize: 13,
-                color: notifStatus.includes('blocked') ? '#ff3b30' : '#34c759',
+                color: notifStatus.includes('blocked') ? '#e05040' : 'var(--accent2)',
               }}
             >
               {notifStatus}

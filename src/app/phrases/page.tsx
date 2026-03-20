@@ -236,15 +236,15 @@ export default function PhrasesPage() {
   const allCached = totalCount > 0 && Object.values(grouped).flat().every((p) => cachedPhraseIds.has(p.id))
 
   return (
-    <div style={{ background: '#0a0a0a', minHeight: '100vh', maxWidth: 600, margin: '0 auto' }}>
+    <div className="page-enter" style={{ background: 'var(--bg)', minHeight: '100vh', maxWidth: 600, margin: '0 auto' }}>
       {/* Header */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px',
-          borderBottom: '1px solid #1a1a1a',
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         <button
@@ -252,7 +252,7 @@ export default function PhrasesPage() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#888',
+            color: 'var(--text-muted)',
             fontSize: 24,
             cursor: 'pointer',
             minWidth: 48,
@@ -265,13 +265,13 @@ export default function PhrasesPage() {
           ←
         </button>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'white' }}>My Phrases</div>
-          <div style={{ fontSize: 13, color: '#666' }}>{totalCount} saved</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>My Phrases</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{totalCount} saved</div>
         </div>
         <div style={{ minWidth: 48 }} />
       </div>
 
-      <div style={{ padding: '16px' }}>
+      <div style={{ padding: '16px 20px' }}>
         {/* PPP: PDF export button */}
         {totalCount > 0 && (
           <div style={{ marginBottom: 12 }}>
@@ -279,11 +279,11 @@ export default function PhrasesPage() {
               onClick={handlePrintPhrasebook}
               style={{
                 width: '100%',
-                background: '#111',
-                border: '1px solid #333',
-                borderRadius: 12,
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 14,
                 padding: '14px 16px',
-                color: '#aaa',
+                color: 'var(--text-muted)',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -304,18 +304,18 @@ export default function PhrasesPage() {
             {isDownloading ? (
               <div
                 style={{
-                  background: '#111',
-                  border: '1px solid #333',
-                  borderRadius: 12,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 14,
                   padding: '14px 16px',
                 }}
               >
-                <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 8 }}>
                   Downloading audio... {downloadProgress}%
                 </div>
                 <div
                   style={{
-                    background: '#222',
+                    background: 'var(--card2)',
                     borderRadius: 4,
                     height: 6,
                     overflow: 'hidden',
@@ -323,7 +323,7 @@ export default function PhrasesPage() {
                 >
                   <div
                     style={{
-                      background: '#0a84ff',
+                      background: 'var(--accent)',
                       height: '100%',
                       width: `${downloadProgress}%`,
                       transition: 'width 0.3s ease',
@@ -338,11 +338,11 @@ export default function PhrasesPage() {
                 disabled={allCached}
                 style={{
                   width: '100%',
-                  background: allCached ? '#0a1a0a' : '#111',
-                  border: `1px solid ${allCached ? '#1a3a1a' : '#333'}`,
-                  borderRadius: 12,
+                  background: allCached ? 'rgba(124,154,94,0.1)' : 'var(--card)',
+                  border: `1px solid ${allCached ? 'rgba(124,154,94,0.3)' : 'var(--border)'}`,
+                  borderRadius: 14,
                   padding: '14px 16px',
-                  color: allCached ? '#4caf50' : '#aaa',
+                  color: allCached ? 'var(--accent2)' : 'var(--text-muted)',
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: allCached ? 'default' : 'pointer',
@@ -364,11 +364,11 @@ export default function PhrasesPage() {
           <div style={{ marginBottom: 28 }}>
             <h2
               style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#ff6b6b',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#e05050',
                 textTransform: 'uppercase',
-                letterSpacing: 1,
+                letterSpacing: 1.2,
                 marginBottom: 12,
               }}
             >
@@ -379,9 +379,9 @@ export default function PhrasesPage() {
                 <div
                   key={wp.phraseItalian}
                   style={{
-                    background: '#1a0a0a',
-                    border: `1px solid ${getStatusColor(wp.status)}44`,
-                    borderRadius: 12,
+                    background: 'rgba(196,60,40,0.06)',
+                    border: `1px solid ${getStatusColor(wp.status)}55`,
+                    borderRadius: 14,
                     padding: '12px 14px',
                     display: 'flex',
                     alignItems: 'center',
@@ -398,10 +398,10 @@ export default function PhrasesPage() {
                     }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: 'white' }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
                       {wp.phraseItalian}
                     </div>
-                    <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                       {getStatusLabel(wp.status)} · {wp.attempts} attempt{wp.attempts !== 1 ? 's' : ''}
                     </div>
                   </div>
@@ -415,14 +415,14 @@ export default function PhrasesPage() {
           <div
             style={{
               textAlign: 'center',
-              color: '#444',
+              color: 'var(--text-muted)',
               marginTop: weakPhrases.length > 0 ? 40 : 80,
               fontSize: 16,
             }}
           >
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⭐</div>
-            <p>No saved phrases yet.</p>
-            <p style={{ fontSize: 14, color: '#333', marginTop: 8 }}>
+            <div style={{ fontSize: 52, marginBottom: 16 }}>⭐</div>
+            <p style={{ fontFamily: 'var(--font-heading)', fontSize: 18 }}>No saved phrases yet.</p>
+            <p style={{ fontSize: 14, color: 'var(--text-dim)', marginTop: 8, lineHeight: 1.5 }}>
               Tap ⭐ on any tutor message to save it.
             </p>
           </div>
@@ -434,11 +434,11 @@ export default function PhrasesPage() {
               <div key={scenarioId} style={{ marginBottom: 28 }}>
                 <h2
                   style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#888',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
                     textTransform: 'uppercase',
-                    letterSpacing: 1,
+                    letterSpacing: 1.2,
                     marginBottom: 12,
                   }}
                 >
@@ -452,18 +452,19 @@ export default function PhrasesPage() {
                       <div
                         key={phrase.id}
                         style={{
-                          background: '#111',
-                          border: '1px solid #222',
-                          borderRadius: 12,
+                          background: 'var(--card)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 16,
                           padding: '14px 16px',
                           display: 'flex',
                           alignItems: 'center',
                           gap: 12,
+                          boxShadow: 'var(--shadow)',
                         }}
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ fontSize: 17, fontWeight: 600, color: 'white' }}>
+                            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
                               {phrase.italian}
                             </div>
                             {/* Confidence dot */}
@@ -492,10 +493,10 @@ export default function PhrasesPage() {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                             {phrase.phonetic}
                           </div>
-                          <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
                             {phrase.english}
                           </div>
                         </div>
@@ -503,18 +504,18 @@ export default function PhrasesPage() {
                           onClick={() => handlePlay(phrase)}
                           disabled={playingId !== null}
                           style={{
-                            background: '#1c1c1e',
-                            border: '1px solid #333',
-                            borderRadius: 10,
-                            width: 40,
-                            height: 40,
+                            background: 'var(--card2)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 12,
+                            width: 42,
+                            height: 42,
                             cursor: playingId ? 'not-allowed' : 'pointer',
                             fontSize: 18,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
-                            color: playingId === phrase.id ? '#0a84ff' : '#888',
+                            color: playingId === phrase.id ? 'var(--accent)' : 'var(--text-muted)',
                           }}
                           aria-label={`Play ${phrase.italian}`}
                         >
@@ -525,7 +526,7 @@ export default function PhrasesPage() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#444',
+                            color: 'var(--text-dim)',
                             cursor: 'pointer',
                             fontSize: 18,
                             padding: 4,

@@ -25,6 +25,8 @@ function ReadinessRing({ readiness }: { readiness: number }) {
   const C = 2 * Math.PI * R
   const offset = C - (readiness / 100) * C
 
+  const ringColor = readiness >= 70 ? '#7c9a5e' : readiness >= 40 ? '#d4a843' : '#c4703f'
+
   return (
     <div
       style={{
@@ -36,29 +38,29 @@ function ReadinessRing({ readiness }: { readiness: number }) {
       }}
     >
       <svg width="128" height="128" aria-label={`${readiness}% travel ready`}>
-        <circle cx="64" cy="64" r={R} fill="none" stroke="#1a1a1a" strokeWidth="10" />
+        <circle cx="64" cy="64" r={R} fill="none" stroke="var(--border)" strokeWidth="10" />
         <circle
           cx="64"
           cy="64"
           r={R}
           fill="none"
-          stroke="#0a84ff"
+          stroke={ringColor}
           strokeWidth="10"
           strokeDasharray={C}
           strokeDashoffset={offset}
           strokeLinecap="round"
           transform="rotate(-90 64 64)"
-          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+          style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.6s ease' }}
         />
         <text
           x="64"
           y="58"
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="white"
+          fill="var(--text)"
           fontSize="26"
           fontWeight="700"
-          fontFamily="system-ui, sans-serif"
+          fontFamily="var(--font-sans)"
         >
           {readiness}%
         </text>
@@ -67,9 +69,10 @@ function ReadinessRing({ readiness }: { readiness: number }) {
           y="80"
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="#555"
+          fill="var(--text-muted)"
           fontSize="11"
-          fontFamily="system-ui, sans-serif"
+          fontFamily="var(--font-sans)"
+          letterSpacing="1.5"
         >
           READY
         </text>
@@ -77,13 +80,13 @@ function ReadinessRing({ readiness }: { readiness: number }) {
       <div
         style={{
           fontSize: 15,
-          color: '#888',
+          color: 'var(--text-muted)',
           textAlign: 'center',
-          marginTop: 4,
+          marginTop: 6,
         }}
       >
         You&apos;re{' '}
-        <span style={{ color: '#0a84ff', fontWeight: 600 }}>{readiness}%</span>{' '}
+        <span style={{ color: ringColor, fontWeight: 700 }}>{readiness}%</span>{' '}
         ready for Italy
       </div>
     </div>
@@ -99,7 +102,6 @@ export default function ScenarioPicker() {
   const [showRoleplayPicker, setShowRoleplayPicker] = useState(false)
   const [dailyPrompt, setDailyPrompt] = useState<ReturnType<typeof getTodayPrompt> | null>(null)
   const [dailyDone, setDailyDone] = useState(false)
-  // UUU: Reminder nudge (first-open) + in-app banner
   const [showReminderNudge, setShowReminderNudge] = useState(false)
   const [showReminderBanner, setShowReminderBanner] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState<{ scenarioId: string; title: string; suggestions: string[] } | null>(null)
@@ -109,7 +111,6 @@ export default function ScenarioPicker() {
     if (!isOnboardingComplete()) {
       setShowOnboarding(true)
     } else {
-      // After onboarding, show interests screen if never set
       if (!hasSeenInterests()) {
         router.push('/interests')
         return
@@ -118,7 +119,6 @@ export default function ScenarioPicker() {
     }
     setReadiness(computeReadiness())
 
-    // Daily prompt
     const prompt = getTodayPrompt()
     setDailyPrompt(prompt)
     setDailyDone(isDailyPromptCompleted())
@@ -126,13 +126,11 @@ export default function ScenarioPicker() {
       markPromptSeen()
     }
 
-    // UUU: Show one-time reminder nudge after onboarding
     if (isOnboardingComplete() && !hasShownReminderPrompt()) {
       setShowReminderNudge(true)
       markReminderPromptShown()
     }
 
-    // UUU: In-app practice reminder banner (no push needed)
     const lastPractice = localStorage.getItem('linforo-last-practice-date')
     if (shouldShowInAppReminder(lastPractice)) {
       setShowReminderBanner(true)
@@ -142,7 +140,6 @@ export default function ScenarioPicker() {
   const handleOnboardingComplete = (voiceGender: 'female' | 'male') => {
     void voiceGender
     trackEvent('onboarding_completed')
-    // Navigate to interests without hiding onboarding first — avoids flash
     if (!hasSeenInterests()) {
       router.push('/interests')
       return
@@ -190,7 +187,7 @@ export default function ScenarioPicker() {
   }
 
   if (!mounted) {
-    return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
+    return <div style={{ background: 'var(--bg)', minHeight: '100vh' }} />
   }
 
   if (showOnboarding) {
@@ -202,8 +199,8 @@ export default function ScenarioPicker() {
 
   return (
     <main
-      className="min-h-screen"
-      style={{ background: '#0a0a0a', padding: '24px 16px' }}
+      className="min-h-screen page-enter"
+      style={{ background: 'var(--bg)', padding: '24px 20px' }}
     >
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         {/* Header row */}
@@ -212,21 +209,21 @@ export default function ScenarioPicker() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: 8,
+            marginBottom: 10,
           }}
         >
           <button
             onClick={() => { trackEvent('emergency_opened'); router.push('/voice?sos=true') }}
             style={{
-              background: '#1a0a0a',
-              border: '1px solid #3a1a1a',
-              borderRadius: 20,
+              background: 'rgba(196,60,40,0.12)',
+              border: '1px solid rgba(196,60,40,0.3)',
+              borderRadius: 22,
               width: 48,
               height: 48,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 22,
+              fontSize: 20,
               cursor: 'pointer',
             }}
             aria-label="Emergency phrases"
@@ -234,31 +231,35 @@ export default function ScenarioPicker() {
             🆘
           </button>
 
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: 'white',
-              textAlign: 'center',
-              margin: 0,
-            }}
-          >
-            🇮🇹 Linforo
-          </h1>
+          <div style={{ textAlign: 'center' }}>
+            <h1
+              style={{
+                fontSize: 30,
+                fontWeight: 700,
+                color: 'var(--text)',
+                fontFamily: 'var(--font-heading)',
+                letterSpacing: '-0.5px',
+                margin: 0,
+                lineHeight: 1,
+              }}
+            >
+              🇮🇹 Linforo
+            </h1>
+          </div>
 
           <div style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={() => router.push('/community')}
               style={{
-                background: '#1a1a1a',
-                border: '1px solid #333',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
                 borderRadius: 20,
                 width: 44,
                 height: 44,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 20,
+                fontSize: 18,
                 cursor: 'pointer',
               }}
               aria-label="Community"
@@ -268,15 +269,15 @@ export default function ScenarioPicker() {
             <button
               onClick={() => router.push('/profile')}
               style={{
-                background: '#1a1a1a',
-                border: '1px solid #333',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
                 borderRadius: 20,
                 width: 44,
                 height: 44,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 20,
+                fontSize: 18,
                 cursor: 'pointer',
               }}
               aria-label="Profile"
@@ -286,15 +287,15 @@ export default function ScenarioPicker() {
             <button
               onClick={() => router.push('/history')}
               style={{
-                background: '#1a1a1a',
-                border: '1px solid #333',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
                 borderRadius: 20,
                 width: 44,
                 height: 44,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 20,
+                fontSize: 18,
                 cursor: 'pointer',
               }}
               aria-label="Conversation history"
@@ -306,22 +307,22 @@ export default function ScenarioPicker() {
 
         <p
           style={{
-            fontSize: 16,
-            color: '#888',
+            fontSize: 15,
+            color: 'var(--text-muted)',
             textAlign: 'center',
-            marginBottom: 8,
+            marginBottom: 10,
           }}
         >
           Choose a scenario to practice
         </p>
 
-        {/* UUU: In-app reminder banner */}
+        {/* In-app reminder banner */}
         {showReminderBanner && (
           <div
             style={{
-              background: '#0a1a2a',
-              border: '1px solid #1a3a5a',
-              borderRadius: 12,
+              background: 'rgba(196, 112, 63, 0.1)',
+              border: '1px solid rgba(196, 112, 63, 0.3)',
+              borderRadius: 14,
               padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
@@ -329,12 +330,12 @@ export default function ScenarioPicker() {
               marginBottom: 12,
             }}
           >
-            <div style={{ fontSize: 14, color: '#5a9adf' }}>
+            <div style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600 }}>
               🇮🇹 Ready for today&apos;s Italian?
             </div>
             <button
               onClick={() => setShowReminderBanner(false)}
-              style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18 }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18, padding: 0, minWidth: 28, minHeight: 28 }}
             >
               ×
             </button>
@@ -342,16 +343,17 @@ export default function ScenarioPicker() {
         )}
 
         {/* Interests & settings link */}
-        <div style={{ textAlign: 'center', marginBottom: 8, display: 'flex', justifyContent: 'center', gap: 16 }}>
+        <div style={{ textAlign: 'center', marginBottom: 10, display: 'flex', justifyContent: 'center', gap: 20 }}>
           <button
             onClick={() => router.push('/interests')}
             style={{
               background: 'none',
               border: 'none',
-              color: '#555',
+              color: 'var(--text-muted)',
               fontSize: 13,
               cursor: 'pointer',
               textDecoration: 'underline',
+              textDecorationColor: 'var(--border2)',
             }}
           >
             ✨ My interests
@@ -361,10 +363,11 @@ export default function ScenarioPicker() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#555',
+              color: 'var(--text-muted)',
               fontSize: 13,
               cursor: 'pointer',
               textDecoration: 'underline',
+              textDecorationColor: 'var(--border2)',
             }}
           >
             ⚙️ Settings
@@ -381,25 +384,27 @@ export default function ScenarioPicker() {
         {dailyPrompt && !dailyDone && (
           <button
             onClick={handleDailyPrompt}
+            className="card-hover"
             style={{
               width: '100%',
-              background: 'linear-gradient(135deg, #1a2a0a 0%, #1e300e 100%)',
-              border: '1px solid #3a5a1a',
-              borderRadius: 16,
+              background: 'linear-gradient(135deg, rgba(124,154,94,0.15) 0%, rgba(212,168,67,0.12) 100%)',
+              border: '1px solid rgba(124,154,94,0.4)',
+              borderRadius: 18,
               padding: '18px 20px',
               marginBottom: 16,
               cursor: 'pointer',
               textAlign: 'left',
               minHeight: 48,
+              boxShadow: '0 2px 16px rgba(124,154,94,0.1)',
             }}
           >
-            <div style={{ fontSize: 13, color: '#7adf4a', fontWeight: 600, marginBottom: 4 }}>
-              🎯 TODAY&apos;S CHALLENGE
+            <div style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 700, marginBottom: 5, letterSpacing: '1px', textTransform: 'uppercase' }}>
+              🎯 Today&apos;s Challenge
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'white' }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)', lineHeight: 1.3 }}>
               {dailyPrompt.text}
             </div>
-            <div style={{ fontSize: 13, color: '#7a9a4a', marginTop: 4 }}>
+            <div style={{ fontSize: 13, color: 'var(--accent2)', marginTop: 6, opacity: 0.8 }}>
               Tap to start this conversation →
             </div>
           </button>
@@ -408,38 +413,39 @@ export default function ScenarioPicker() {
         {dailyPrompt && dailyDone && (
           <div
             style={{
-              background: '#0a1a0a',
-              border: '1px solid #1a3a1a',
-              borderRadius: 16,
+              background: 'rgba(124,154,94,0.08)',
+              border: '1px solid rgba(124,154,94,0.25)',
+              borderRadius: 18,
               padding: '14px 20px',
               marginBottom: 16,
               textAlign: 'left',
             }}
           >
-            <div style={{ fontSize: 13, color: '#4caf50', fontWeight: 600 }}>
-              ✅ TODAY&apos;S CHALLENGE DONE
+            <div style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+              ✅ Today&apos;s Challenge Done
             </div>
-            <div style={{ fontSize: 14, color: '#555', marginTop: 2 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
               {dailyPrompt.text}
             </div>
           </div>
         )}
 
-        {/* UUU: One-time reminder nudge modal */}
+        {/* One-time reminder nudge */}
         {showReminderNudge && (
           <div
             style={{
-              background: '#0a1a2a',
-              border: '1px solid #1a3a5a',
-              borderRadius: 14,
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: 18,
               padding: '18px 18px',
               marginBottom: 16,
+              boxShadow: 'var(--shadow)',
             }}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 6 }}>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 6, fontFamily: 'var(--font-heading)' }}>
               🇮🇹 Daily Italian reminder?
             </div>
-            <p style={{ fontSize: 14, color: '#888', margin: '0 0 14px' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '0 0 14px', lineHeight: 1.5 }}>
               We&apos;ll nudge you once a day — no guilt if you skip!
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -454,15 +460,15 @@ export default function ScenarioPicker() {
                 }}
                 style={{
                   flex: 1,
-                  background: '#0a84ff',
+                  background: 'var(--accent)',
                   border: 'none',
-                  borderRadius: 10,
+                  borderRadius: 12,
                   padding: '12px',
                   color: 'white',
                   fontSize: 14,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
                 Yes, remind me!
@@ -471,14 +477,14 @@ export default function ScenarioPicker() {
                 onClick={() => setShowReminderNudge(false)}
                 style={{
                   flex: 1,
-                  background: '#1c1c1e',
-                  border: '1px solid #333',
-                  borderRadius: 10,
+                  background: 'var(--card2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
                   padding: '12px',
-                  color: '#888',
+                  color: 'var(--text-muted)',
                   fontSize: 14,
                   cursor: 'pointer',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
                 Maybe later
@@ -491,24 +497,25 @@ export default function ScenarioPicker() {
         {showNudge && (
           <div
             style={{
-              background: '#1a1a2e',
-              border: '1px solid #334',
-              borderRadius: 12,
-              padding: '12px 16px',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              padding: '14px 16px',
               marginBottom: 20,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
               cursor: 'pointer',
+              boxShadow: 'var(--shadow)',
             }}
             onClick={() => router.push('/sign-up')}
           >
             <div>
-              <p style={{ fontSize: 14, color: '#aaa', margin: 0 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
                 Create an account to save your progress
               </p>
-              <p style={{ fontSize: 12, color: '#0a84ff', margin: '2px 0 0', fontWeight: 600 }}>
+              <p style={{ fontSize: 12, color: 'var(--accent)', margin: '2px 0 0', fontWeight: 700 }}>
                 Tap to sign up →
               </p>
             </div>
@@ -521,7 +528,7 @@ export default function ScenarioPicker() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#555',
+                color: 'var(--text-muted)',
                 cursor: 'pointer',
                 fontSize: 18,
                 lineHeight: 1,
@@ -539,30 +546,33 @@ export default function ScenarioPicker() {
         {/* Featured: Freestyle */}
         <button
           onClick={() => handleSelect(featured.id)}
+          className="card-hover"
           style={{
             width: '100%',
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-            border: '1px solid #334',
-            borderRadius: 16,
+            background: 'linear-gradient(135deg, rgba(196,112,63,0.2) 0%, rgba(212,168,67,0.15) 50%, rgba(196,112,63,0.1) 100%)',
+            border: '1px solid rgba(196,112,63,0.35)',
+            borderRadius: 20,
             padding: '28px 24px',
             marginBottom: 12,
             cursor: 'pointer',
             textAlign: 'left',
             minHeight: 48,
+            boxShadow: '0 4px 24px rgba(196,112,63,0.08)',
           }}
         >
           <div style={{ fontSize: 36 }}>{featured.emoji}</div>
           <div
             style={{
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 700,
-              color: 'white',
+              color: 'var(--text)',
               marginTop: 8,
+              fontFamily: 'var(--font-heading)',
             }}
           >
             {featured.title}
           </div>
-          <div style={{ fontSize: 15, color: '#aaa', marginTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
             {featured.description}
           </div>
         </button>
@@ -570,31 +580,34 @@ export default function ScenarioPicker() {
         {/* Roleplay card */}
         <button
           onClick={() => handleSelect('roleplay')}
+          className="card-hover"
           style={{
             width: '100%',
-            background: 'linear-gradient(135deg, #1a0a2e 0%, #2a0f3e 50%, #1a0a5e 100%)',
-            border: '1px solid #443',
-            borderRadius: 16,
+            background: 'linear-gradient(135deg, rgba(124,90,180,0.15) 0%, rgba(90,60,160,0.12) 100%)',
+            border: '1px solid rgba(124,90,180,0.3)',
+            borderRadius: 20,
             padding: '22px 24px',
             marginBottom: 20,
             cursor: 'pointer',
             textAlign: 'left',
             minHeight: 48,
+            boxShadow: '0 4px 24px rgba(90,60,160,0.06)',
           }}
           aria-label="Roleplay a full conversation"
         >
           <div style={{ fontSize: 36 }}>🎭</div>
           <div
             style={{
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: 700,
-              color: 'white',
+              color: 'var(--text)',
               marginTop: 8,
+              fontFamily: 'var(--font-heading)',
             }}
           >
             Roleplay
           </div>
-          <div style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
             Full character conversations — waiter, shopkeeper, taxi driver & more
           </div>
         </button>
@@ -607,18 +620,21 @@ export default function ScenarioPicker() {
             gap: 12,
           }}
         >
-          {rest.map((scenario) => (
+          {rest.map((scenario, i) => (
             <button
               key={scenario.id}
               onClick={() => handleSelect(scenario.id)}
+              className="card-hover stagger-item"
               style={{
-                background: '#111',
-                border: '1px solid #222',
-                borderRadius: 12,
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 16,
                 padding: '18px 16px',
                 cursor: 'pointer',
                 textAlign: 'left',
                 minHeight: 48,
+                boxShadow: 'var(--shadow)',
+                animationDelay: `${i * 50}ms`,
               }}
             >
               <div style={{ fontSize: 28 }}>{scenario.emoji}</div>
@@ -626,13 +642,14 @@ export default function ScenarioPicker() {
                 style={{
                   fontSize: 16,
                   fontWeight: 600,
-                  color: 'white',
+                  color: 'var(--text)',
                   marginTop: 6,
+                  fontFamily: 'var(--font-heading)',
                 }}
               >
                 {scenario.title}
               </div>
-              <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.3 }}>
                 {scenario.description}
               </div>
             </button>
@@ -646,7 +663,7 @@ export default function ScenarioPicker() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.85)',
+            background: 'rgba(26,20,16,0.88)',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
@@ -659,19 +676,20 @@ export default function ScenarioPicker() {
         >
           <div
             style={{
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: '20px 20px 0 0',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px 24px 0 0',
               padding: '24px 20px 32px',
               width: '100%',
               maxWidth: 600,
+              boxShadow: '0 -8px 48px rgba(0,0,0,0.4)',
             }}
           >
-            <div style={{ width: 40, height: 4, background: '#333', borderRadius: 2, margin: '0 auto 20px' }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 6 }}>
+            <div style={{ width: 40, height: 4, background: 'var(--border2)', borderRadius: 2, margin: '0 auto 20px' }} />
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 6, fontFamily: 'var(--font-heading)' }}>
               {showSuggestions.title}
             </h2>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16 }}>
               What would you like to practice?
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
@@ -684,11 +702,11 @@ export default function ScenarioPicker() {
                     setShowSuggestions(null)
                   }}
                   style={{
-                    background: '#1a1a2a',
-                    border: '1px solid #2a2a4a',
-                    borderRadius: 12,
+                    background: 'var(--card2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 14,
                     padding: '14px 16px',
-                    color: 'white',
+                    color: 'var(--text)',
                     fontSize: 15,
                     textAlign: 'left',
                     cursor: 'pointer',
@@ -708,13 +726,13 @@ export default function ScenarioPicker() {
               }}
               style={{
                 width: '100%',
-                background: '#0a84ff',
+                background: 'var(--accent)',
                 border: 'none',
-                borderRadius: 12,
+                borderRadius: 14,
                 padding: '14px',
                 color: 'white',
                 fontSize: 15,
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: 'pointer',
                 marginBottom: 10,
                 minHeight: 48,
@@ -727,10 +745,10 @@ export default function ScenarioPicker() {
               style={{
                 width: '100%',
                 background: 'none',
-                border: '1px solid #333',
-                borderRadius: 12,
+                border: '1px solid var(--border)',
+                borderRadius: 14,
                 padding: '12px',
-                color: '#666',
+                color: 'var(--text-muted)',
                 fontSize: 14,
                 cursor: 'pointer',
                 minHeight: 44,
@@ -748,7 +766,7 @@ export default function ScenarioPicker() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.85)',
+            background: 'rgba(26,20,16,0.88)',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
@@ -761,34 +779,36 @@ export default function ScenarioPicker() {
         >
           <div
             style={{
-              background: '#111',
-              border: '1px solid #333',
-              borderRadius: '20px 20px 0 0',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: '24px 24px 0 0',
               padding: '24px 20px 32px',
               width: '100%',
               maxWidth: 600,
+              boxShadow: '0 -8px 48px rgba(0,0,0,0.4)',
             }}
           >
             <div
               style={{
                 width: 40,
                 height: 4,
-                background: '#333',
+                background: 'var(--border2)',
                 borderRadius: 2,
                 margin: '0 auto 20px',
               }}
             />
             <h2
               style={{
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: 700,
-                color: 'white',
+                color: 'var(--text)',
                 marginBottom: 6,
+                fontFamily: 'var(--font-heading)',
               }}
             >
               🎭 Choose a character
             </h2>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
               You&apos;ll navigate a full conversation in Italian
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -797,9 +817,9 @@ export default function ScenarioPicker() {
                   key={char.id}
                   onClick={() => handleRoleplayCharacter(char.id)}
                   style={{
-                    background: '#1a1a1a',
-                    border: '1px solid #2a2a2a',
-                    borderRadius: 14,
+                    background: 'var(--card2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 16,
                     padding: '16px 18px',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -811,10 +831,10 @@ export default function ScenarioPicker() {
                 >
                   <span style={{ fontSize: 28 }}>{char.emoji}</span>
                   <div>
-                    <div style={{ fontSize: 17, fontWeight: 600, color: 'white' }}>
+                    <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
                       {char.label}
                     </div>
-                    <div style={{ fontSize: 13, color: '#666' }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                       {char.description}
                     </div>
                   </div>
@@ -826,10 +846,10 @@ export default function ScenarioPicker() {
               style={{
                 width: '100%',
                 background: 'none',
-                border: '1px solid #333',
-                borderRadius: 14,
+                border: '1px solid var(--border)',
+                borderRadius: 16,
                 padding: '14px',
-                color: '#666',
+                color: 'var(--text-muted)',
                 fontSize: 15,
                 cursor: 'pointer',
                 marginTop: 14,

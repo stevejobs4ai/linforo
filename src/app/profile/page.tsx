@@ -26,13 +26,14 @@ function BadgeDisplay({ tier, emoji, label }: { tier: BadgeTier; emoji: string; 
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        background: '#1a1a1a',
+        background: 'rgba(196,112,63,0.08)',
         border: `2px solid ${BADGE_COLORS[tier]}`,
         borderRadius: 20,
-        padding: '6px 14px',
-        fontSize: 14,
+        padding: '5px 14px',
+        fontSize: 13,
         fontWeight: 700,
         color: BADGE_COLORS[tier],
+        marginTop: 6,
       }}
     >
       {emoji} {label}
@@ -251,39 +252,39 @@ export default function ProfilePage() {
   }
 
   if (!mounted || !isLoaded) {
-    return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
+    return <div style={{ background: 'var(--bg)', minHeight: '100vh' }} />
   }
 
   if (!user) {
     return (
-      <main style={{ background: '#0a0a0a', minHeight: '100vh', padding: '24px 16px' }}>
+      <main className="page-enter" style={{ background: 'var(--bg)', minHeight: '100vh', padding: '24px 20px' }}>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-            <button onClick={() => router.back()} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 20, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', color: 'white' }}>←</button>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: 0 }}>My Profile</h1>
+            <button onClick={() => router.back()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 22, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', color: 'var(--text)' }}>←</button>
+            <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'var(--font-heading)' }}>My Profile</h1>
           </div>
-          <div style={{ background: '#111', border: '1px solid #222', borderRadius: 20, padding: 24, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1a2a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#444' }}>?</div>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 22, padding: 24, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, boxShadow: 'var(--shadow)' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(196,112,63,0.1)', border: '3px solid rgba(196,112,63,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: 'var(--text-dim)' }}>?</div>
             <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#555' }}>Your Name</div>
-              <div style={{ fontSize: 13, color: '#444', marginTop: 4 }}>🥉 Bronze (starter)</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>Your Name</div>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>🥉 Bronze (starter)</div>
             </div>
           </div>
-          <div style={{ background: '#111', border: '1px solid #222', borderRadius: 16, padding: 20, marginBottom: 16 }}>
-            <div style={{ fontSize: 13, color: '#444', fontWeight: 600, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>This Month</div>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 18, padding: 20, marginBottom: 16, boxShadow: 'var(--shadow)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: '1px' }}>This Month</div>
             <div style={{ display: 'flex', gap: 16 }}>
               {[{ label: 'Scenarios practiced', value: 0 }, { label: 'Phrases owned', value: 0 }, { label: 'Roleplays', value: 0 }].map(({ label, value }) => (
                 <div key={label} style={{ flex: 1, textAlign: 'center' as const }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: '#333' }}>{value}</div>
-                  <div style={{ fontSize: 12, color: '#444', marginTop: 2 }}>{label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-dim)' }}>{value}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{label}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ background: 'linear-gradient(135deg, #0a1a2a 0%, #1a0a2a 100%)', border: '1px solid #1a2a4a', borderRadius: 16, padding: 24, textAlign: 'center' as const }}>
-            <div style={{ fontSize: 22, marginBottom: 8 }}>🇮🇹 Track your Italian journey</div>
-            <div style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>Sign up to save your progress, earn badges, and appear in the community feed.</div>
-            <button onClick={() => router.push('/sign-up')} style={{ background: '#0a84ff', border: 'none', borderRadius: 12, padding: '12px 32px', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+          <div style={{ background: 'linear-gradient(135deg, rgba(196,112,63,0.12) 0%, rgba(212,168,67,0.08) 100%)', border: '1px solid rgba(196,112,63,0.3)', borderRadius: 18, padding: 24, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 24, marginBottom: 8, fontFamily: 'var(--font-heading)' }}>🇮🇹 Track your Italian journey</div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.5 }}>Sign up to save your progress, earn badges, and appear in the community feed.</div>
+            <button onClick={() => router.push('/sign-up')} style={{ background: 'var(--accent)', border: 'none', borderRadius: 14, padding: '13px 32px', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 20px rgba(196,112,63,0.35)' }}>
               Sign up to track your progress →
             </button>
           </div>
@@ -297,49 +298,50 @@ export default function ProfilePage() {
   const displayName = user?.fullName ?? user?.username ?? 'Learner'
 
   return (
-    <main style={{ background: '#0a0a0a', minHeight: '100vh', padding: '24px 16px' }}>
+    <main className="page-enter" style={{ background: 'var(--bg)', minHeight: '100vh', padding: '24px 20px' }}>
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button
             onClick={() => router.back()}
             style={{
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 20,
-              width: 40,
-              height: 40,
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              borderRadius: 22,
+              width: 44,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 18,
               cursor: 'pointer',
-              color: 'white',
+              color: 'var(--text)',
             }}
           >
             ←
           </button>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: 0 }}>My Profile</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'var(--font-heading)', letterSpacing: '-0.5px' }}>My Profile</h1>
         </div>
 
         {/* User info */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 20,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 22,
             padding: 24,
             marginBottom: 16,
             display: 'flex',
             alignItems: 'center',
             gap: 16,
+            boxShadow: 'var(--shadow)',
           }}
         >
           {user?.imageUrl ? (
             <img
               src={user.imageUrl}
               alt={displayName}
-              style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }}
+              style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border)' }}
             />
           ) : (
             <div
@@ -347,12 +349,13 @@ export default function ProfilePage() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                background: '#1a3a5a',
+                background: 'rgba(196,112,63,0.15)',
+                border: '3px solid rgba(196,112,63,0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 28,
-                color: '#0a84ff',
+                color: 'var(--accent)',
                 fontWeight: 700,
               }}
             >
@@ -360,11 +363,11 @@ export default function ProfilePage() {
             </div>
           )}
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'white' }}>{displayName}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>{displayName}</div>
             {badge ? (
               <BadgeDisplay tier={badge.tier} emoji={badge.emoji} label={badge.label} />
             ) : (
-              <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>No badge yet</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>No badge yet</div>
             )}
           </div>
         </div>
@@ -372,14 +375,15 @@ export default function ProfilePage() {
         {/* This month stats */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 16,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
             padding: 20,
             marginBottom: 16,
+            boxShadow: 'var(--shadow)',
           }}
         >
-          <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 14, textTransform: 'uppercase', letterSpacing: '1px' }}>
             This Month
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
@@ -389,8 +393,8 @@ export default function ProfilePage() {
               { label: 'Roleplays completed', value: monthlyStats.roleplaysCompleted },
             ].map(({ label, value }) => (
               <div key={label} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#0a84ff' }}>{value}</div>
-                <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--accent)' }}>{value}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.3 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -399,25 +403,26 @@ export default function ProfilePage() {
         {/* Badge progress */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 16,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
             padding: 20,
             marginBottom: 16,
+            boxShadow: 'var(--shadow)',
           }}
         >
-          <div style={{ fontSize: 13, color: '#555', fontWeight: 600, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>
             Badge Progress
           </div>
-          <div style={{ fontSize: 15, color: '#ccc', marginBottom: 8 }}>
-            <span style={{ color: '#0a84ff', fontWeight: 700 }}>{phrasesOwned}</span> phrases owned total
+          <div style={{ fontSize: 15, color: 'var(--text)', marginBottom: 8 }}>
+            <span style={{ color: 'var(--accent3)', fontWeight: 700 }}>{phrasesOwned}</span> phrases owned total
           </div>
           {nextBadge ? (
-            <div style={{ fontSize: 13, color: '#666' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               {nextBadge.emoji} {nextBadge.threshold - phrasesOwned} more to reach {nextBadge.label}
             </div>
           ) : (
-            <div style={{ fontSize: 13, color: '#ffd700' }}>💎 Maximum badge achieved!</div>
+            <div style={{ fontSize: 13, color: 'var(--accent3)' }}>💎 Maximum badge achieved!</div>
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             {[
@@ -432,12 +437,13 @@ export default function ProfilePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 4,
-                  background: '#1a1a1a',
-                  border: `1px solid ${phrasesOwned >= threshold ? BADGE_COLORS[tier] : '#333'}`,
+                  background: phrasesOwned >= threshold ? 'rgba(196,112,63,0.1)' : 'var(--card2)',
+                  border: `1px solid ${phrasesOwned >= threshold ? BADGE_COLORS[tier] : 'var(--border)'}`,
                   borderRadius: 20,
-                  padding: '4px 10px',
+                  padding: '4px 12px',
                   fontSize: 12,
-                  color: phrasesOwned >= threshold ? BADGE_COLORS[tier] : '#555',
+                  color: phrasesOwned >= threshold ? BADGE_COLORS[tier] : 'var(--text-dim)',
+                  fontWeight: phrasesOwned >= threshold ? 700 : 400,
                 }}
               >
                 {emoji} {label}
@@ -449,19 +455,20 @@ export default function ProfilePage() {
         {/* Public profile toggle */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 16,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
             padding: 20,
             marginBottom: 16,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <div>
-            <div style={{ fontSize: 15, color: 'white', fontWeight: 600 }}>Public profile</div>
-            <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>
+            <div style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600 }}>Public profile</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               Show your completions in the community feed
             </div>
           </div>
@@ -471,7 +478,7 @@ export default function ProfilePage() {
               width: 50,
               height: 28,
               borderRadius: 14,
-              background: isPublic ? '#0a84ff' : '#333',
+              background: isPublic ? 'var(--accent)' : 'var(--border2)',
               border: 'none',
               cursor: 'pointer',
               position: 'relative',
@@ -497,14 +504,15 @@ export default function ProfilePage() {
         {/* Share card */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 16,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
             padding: 20,
             marginBottom: 16,
+            boxShadow: 'var(--shadow)',
           }}
         >
-          <div style={{ fontSize: 15, color: 'white', fontWeight: 600, marginBottom: 12 }}>
+          <div style={{ fontSize: 16, color: 'var(--text)', fontWeight: 700, marginBottom: 12, fontFamily: 'var(--font-heading)' }}>
             Share your progress
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -514,14 +522,15 @@ export default function ProfilePage() {
                 onClick={() => setShareSize(size)}
                 style={{
                   flex: 1,
-                  padding: '8px 0',
-                  borderRadius: 10,
-                  border: `1px solid ${shareSize === size ? '#0a84ff' : '#333'}`,
-                  background: shareSize === size ? '#0a1a2a' : '#1a1a1a',
-                  color: shareSize === size ? '#0a84ff' : '#666',
+                  padding: '9px 0',
+                  borderRadius: 12,
+                  border: `1px solid ${shareSize === size ? 'var(--accent)' : 'var(--border)'}`,
+                  background: shareSize === size ? 'rgba(196,112,63,0.1)' : 'var(--card2)',
+                  color: shareSize === size ? 'var(--accent)' : 'var(--text-muted)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   fontSize: 13,
+                  fontFamily: 'inherit',
                 }}
               >
                 {size === 'square' ? '⬛ Square (1080×1080)' : '📱 Story (1080×1920)'}
@@ -533,15 +542,17 @@ export default function ProfilePage() {
             disabled={generating}
             style={{
               width: '100%',
-              padding: '12px 0',
-              borderRadius: 12,
-              background: generating ? '#1a1a1a' : '#0a84ff',
+              padding: '13px 0',
+              borderRadius: 14,
+              background: generating ? 'var(--border)' : 'var(--accent)',
               border: 'none',
               color: 'white',
               fontWeight: 700,
               fontSize: 15,
               cursor: generating ? 'not-allowed' : 'pointer',
               opacity: generating ? 0.7 : 1,
+              fontFamily: 'inherit',
+              boxShadow: generating ? 'none' : '0 4px 20px rgba(196,112,63,0.35)',
             }}
           >
             {generating ? 'Generating…' : '📤 Share my progress'}
@@ -551,25 +562,26 @@ export default function ProfilePage() {
         {/* Referral */}
         <div
           style={{
-            background: '#111',
-            border: '1px solid #222',
-            borderRadius: 16,
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 18,
             padding: 20,
             marginBottom: 16,
+            boxShadow: 'var(--shadow)',
           }}
         >
-          <div style={{ fontSize: 15, color: 'white', fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: 16, color: 'var(--text)', fontWeight: 700, marginBottom: 4, fontFamily: 'var(--font-heading)' }}>
             Refer a friend 🎁
           </div>
-          <div style={{ fontSize: 13, color: '#555', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.5 }}>
             Both of you get 7 days of premium free! {referralCount > 0 && `${referralCount} friend${referralCount > 1 ? 's' : ''} joined so far.`}
           </div>
           {referralCode ? (
             <div
               style={{
-                background: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: 10,
+                background: 'var(--card2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
                 padding: '10px 14px',
                 display: 'flex',
                 alignItems: 'center',
@@ -577,7 +589,7 @@ export default function ProfilePage() {
                 marginBottom: 10,
               }}
             >
-              <span style={{ color: '#0a84ff', fontWeight: 700, fontFamily: 'monospace', fontSize: 18 }}>
+              <span style={{ color: 'var(--accent3)', fontWeight: 700, fontFamily: 'monospace', fontSize: 18 }}>
                 {referralCode}
               </span>
               <button
@@ -588,21 +600,22 @@ export default function ProfilePage() {
                   }
                 }}
                 style={{
-                  background: '#1a3a5a',
-                  border: 'none',
+                  background: 'rgba(196,112,63,0.12)',
+                  border: '1px solid rgba(196,112,63,0.3)',
                   borderRadius: 8,
-                  padding: '4px 10px',
-                  color: '#0a84ff',
+                  padding: '5px 12px',
+                  color: 'var(--accent)',
                   cursor: 'pointer',
                   fontSize: 12,
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  fontFamily: 'inherit',
                 }}
               >
                 Copy link
               </button>
             </div>
           ) : (
-            <div style={{ color: '#555', fontSize: 13 }}>Sign in to get your referral code</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sign in to get your referral code</div>
           )}
           <button
             onClick={() => {
@@ -614,15 +627,16 @@ export default function ProfilePage() {
             disabled={!referralCode}
             style={{
               width: '100%',
-              padding: '10px 0',
-              borderRadius: 10,
-              background: '#1a3a5a',
-              border: 'none',
-              color: '#0a84ff',
-              fontWeight: 600,
+              padding: '11px 0',
+              borderRadius: 12,
+              background: 'rgba(196,112,63,0.1)',
+              border: '1px solid rgba(196,112,63,0.3)',
+              color: 'var(--accent)',
+              fontWeight: 700,
               cursor: referralCode ? 'pointer' : 'not-allowed',
               fontSize: 14,
               opacity: referralCode ? 1 : 0.5,
+              fontFamily: 'inherit',
             }}
           >
             🔗 Share with a friend
@@ -632,29 +646,32 @@ export default function ProfilePage() {
         {/* Upgrade */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #0a1a2a 0%, #1a0a2a 100%)',
-            border: '1px solid #1a2a4a',
-            borderRadius: 16,
-            padding: 20,
+            background: 'linear-gradient(135deg, rgba(196,112,63,0.12) 0%, rgba(212,168,67,0.08) 100%)',
+            border: '1px solid rgba(196,112,63,0.3)',
+            borderRadius: 18,
+            padding: 22,
             marginBottom: 24,
             textAlign: 'center',
+            boxShadow: '0 4px 24px rgba(196,112,63,0.1)',
           }}
         >
-          <div style={{ fontSize: 22, marginBottom: 6 }}>⭐ Go Premium</div>
-          <div style={{ fontSize: 14, color: '#888', marginBottom: 14 }}>
+          <div style={{ fontSize: 22, marginBottom: 6, fontFamily: 'var(--font-heading)' }}>⭐ Go Premium</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
             Unlimited conversations · ElevenLabs voice · Priority features
           </div>
           <button
             onClick={() => router.push('/pricing')}
             style={{
-              background: '#0a84ff',
+              background: 'var(--accent)',
               border: 'none',
-              borderRadius: 12,
-              padding: '12px 32px',
+              borderRadius: 14,
+              padding: '13px 32px',
               color: 'white',
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
+              fontFamily: 'inherit',
+              boxShadow: '0 4px 20px rgba(196,112,63,0.35)',
             }}
           >
             View plans →

@@ -64,7 +64,7 @@ function TranscriptView({
   return (
     <div
       style={{
-        background: '#0a0a0a',
+        background: 'var(--bg)',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -78,8 +78,8 @@ function TranscriptView({
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '16px',
-          borderBottom: '1px solid #1a1a1a',
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         <button
@@ -87,7 +87,7 @@ function TranscriptView({
           style={{
             background: 'none',
             border: 'none',
-            color: '#888',
+            color: 'var(--text-muted)',
             fontSize: 24,
             cursor: 'pointer',
             minWidth: 48,
@@ -100,10 +100,10 @@ function TranscriptView({
           ←
         </button>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'white' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
             {session.scenarioEmoji} {session.scenarioTitle}
           </div>
-          <div style={{ fontSize: 13, color: '#555' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             {formatDate(session.startedAt)} · {userCount} exchange
             {userCount !== 1 ? 's' : ''}
           </div>
@@ -113,11 +113,12 @@ function TranscriptView({
       {/* Read-only hint */}
       <div
         style={{
-          background: '#111',
-          padding: '10px 16px',
+          background: 'var(--card)',
+          padding: '10px 20px',
           fontSize: 13,
-          color: '#555',
+          color: 'var(--text-muted)',
           textAlign: 'center',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         Read-only · Tap any tutor message to replay it
@@ -128,7 +129,7 @@ function TranscriptView({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px',
+          padding: '16px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
@@ -157,17 +158,17 @@ function TranscriptView({
                     : '18px 18px 4px 18px',
                   background: isTutor
                     ? isPlaying
-                      ? '#1a2a1a'
-                      : '#1c1c1e'
-                    : '#0a84ff',
+                      ? 'rgba(124,154,94,0.15)'
+                      : 'var(--card)'
+                    : 'var(--accent)',
                   border: isTutor
                     ? isPlaying
-                      ? '1px solid #2a5a2a'
-                      : '1px solid #2c2c2e'
+                      ? '1px solid rgba(124,154,94,0.4)'
+                      : '1px solid var(--border)'
                     : 'none',
                   fontSize: 17,
-                  lineHeight: 1.5,
-                  color: 'white',
+                  lineHeight: 1.6,
+                  color: isTutor ? 'var(--text)' : 'white',
                   cursor: isTutor ? 'pointer' : 'default',
                   textAlign: 'left',
                   fontFamily: 'inherit',
@@ -203,7 +204,7 @@ export default function HistoryPage() {
   }
 
   if (!mounted) {
-    return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
+    return <div style={{ background: 'var(--bg)', minHeight: '100vh' }} />
   }
 
   if (selected) {
@@ -214,8 +215,9 @@ export default function HistoryPage() {
 
   return (
     <div
+      className="page-enter"
       style={{
-        background: '#0a0a0a',
+        background: 'var(--bg)',
         minHeight: '100vh',
         maxWidth: 600,
         margin: '0 auto',
@@ -228,8 +230,8 @@ export default function HistoryPage() {
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '16px',
-          borderBottom: '1px solid #1a1a1a',
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         <button
@@ -237,7 +239,7 @@ export default function HistoryPage() {
           style={{
             background: 'none',
             border: 'none',
-            color: '#888',
+            color: 'var(--text-muted)',
             fontSize: 24,
             cursor: 'pointer',
             minWidth: 48,
@@ -249,7 +251,7 @@ export default function HistoryPage() {
         >
           ←
         </button>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'white', margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', margin: 0, fontFamily: 'var(--font-heading)' }}>
           🕐 Conversation History
         </h1>
       </div>
@@ -262,32 +264,33 @@ export default function HistoryPage() {
             padding: '0 24px',
           }}
         >
-          <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-          <div style={{ fontSize: 18, color: '#555' }}>No conversations yet.</div>
-          <div style={{ fontSize: 14, color: '#444', marginTop: 8 }}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>💬</div>
+          <div style={{ fontSize: 18, color: 'var(--text-muted)', fontFamily: 'var(--font-heading)' }}>No conversations yet.</div>
+          <div style={{ fontSize: 14, color: 'var(--text-dim)', marginTop: 8, lineHeight: 1.5 }}>
             Start a conversation to see your history here.
           </div>
           <button
             onClick={() => router.push('/')}
             style={{
               marginTop: 24,
-              background: '#0a84ff',
+              background: 'var(--accent)',
               border: 'none',
-              borderRadius: 14,
+              borderRadius: 16,
               padding: '14px 28px',
               color: 'white',
               fontSize: 16,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               minHeight: 48,
+              boxShadow: '0 4px 20px rgba(196,112,63,0.3)',
             }}
           >
             Start practicing
           </button>
         </div>
       ) : (
-        <div style={{ padding: '16px' }}>
-          {sessions.map((session) => {
+        <div style={{ padding: '16px 20px' }}>
+          {sessions.map((session, i) => {
             const userCount = session.messages.filter(
               (m) => m.role === 'user'
             ).length
@@ -296,16 +299,19 @@ export default function HistoryPage() {
               <button
                 key={session.id}
                 onClick={() => openSession(session.id)}
+                className="card-hover stagger-item"
                 style={{
                   width: '100%',
-                  background: '#111',
-                  border: '1px solid #222',
-                  borderRadius: 14,
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
                   padding: '16px',
                   marginBottom: 12,
                   cursor: 'pointer',
                   textAlign: 'left',
                   minHeight: 48,
+                  boxShadow: 'var(--shadow)',
+                  animationDelay: `${i * 40}ms`,
                 }}
               >
                 <div
@@ -316,17 +322,17 @@ export default function HistoryPage() {
                     marginBottom: 8,
                   }}
                 >
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'white' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-heading)' }}>
                     {session.scenarioEmoji} {session.scenarioTitle}
                   </div>
-                  <div style={{ fontSize: 12, color: '#555', flexShrink: 0, marginLeft: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', flexShrink: 0, marginLeft: 8 }}>
                     {formatDate(session.startedAt)}
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#888', marginBottom: 6 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.4 }}>
                   {preview}
                 </div>
-                <div style={{ fontSize: 12, color: '#444' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                   {userCount} exchange{userCount !== 1 ? 's' : ''}
                 </div>
               </button>

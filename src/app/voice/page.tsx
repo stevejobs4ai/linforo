@@ -1687,12 +1687,12 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                   msg.role === 'user'
                     ? '18px 18px 4px 18px'
                     : '18px 18px 18px 4px',
-                background: msg.role === 'user' ? '#0a84ff' : '#1c1c1e',
+                background: msg.role === 'user' ? 'var(--accent)' : 'var(--card)',
                 border:
-                  msg.role === 'tutor' ? '1px solid #2c2c2e' : 'none',
+                  msg.role === 'tutor' ? '1px solid var(--border)' : 'none',
                 fontSize: 18,
-                lineHeight: 1.5,
-                color: 'white',
+                lineHeight: 1.6,
+                color: msg.role === 'user' ? 'white' : 'var(--text)',
                 fontWeight: msg.role === 'tutor' ? 500 : 400,
                 cursor: msg.role === 'tutor' ? 'pointer' : 'default',
                 textAlign: 'left',
@@ -1708,12 +1708,12 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <div
               style={{
-                background: '#1c1c1e',
-                border: '1px solid #2c2c2e',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
                 borderRadius: '18px 18px 18px 4px',
                 padding: '14px 18px',
                 fontSize: 18,
-                color: '#888',
+                color: 'var(--text-muted)',
               }}
             >
               ...
@@ -1724,15 +1724,15 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         {isSayItBack && sayItBackPhrase && (
           <div
             style={{
-              background: '#1a1a0a',
-              border: '1px solid #444',
-              borderRadius: 12,
+              background: 'rgba(212,168,67,0.1)',
+              border: '1px solid rgba(212,168,67,0.3)',
+              borderRadius: 14,
               padding: '16px',
               textAlign: 'center',
             }}
           >
             <div style={{ fontSize: 20 }}>🎤</div>
-            <div style={{ fontSize: 16, color: '#ffd60a', marginTop: 4 }}>
+            <div style={{ fontSize: 16, color: 'var(--accent3)', marginTop: 4 }}>
               {shadowMode ? 'Now shadow it!' : 'Now you try!'}
             </div>
             {shadowMode && shadowPhrase && (
@@ -1846,13 +1846,13 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           <button
             onClick={toggleHandsFree}
             style={{
-              background: handsFreeMode ? '#0a2a1a' : '#1c1c1e',
-              border: `1px solid ${handsFreeMode ? '#1a5a2a' : '#333'}`,
+              background: handsFreeMode ? 'rgba(124,154,94,0.15)' : 'var(--card)',
+              border: `1px solid ${handsFreeMode ? 'rgba(124,154,94,0.4)' : 'var(--border)'}`,
               borderRadius: 20,
               padding: '7px 14px',
-              color: handsFreeMode ? '#34c759' : '#666',
+              color: handsFreeMode ? 'var(--accent2)' : 'var(--text-muted)',
               fontSize: 13,
-              fontWeight: handsFreeMode ? 600 : 400,
+              fontWeight: handsFreeMode ? 700 : 400,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -1929,7 +1929,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
             onClick={handsFreeMode ? undefined : handleMicClick}
             disabled={isProcessing || (handsFreeMode && vadState !== 'recording')}
             aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-            className={isRecording ? 'mic-recording-glow' : handsFreeMode && vadState === 'listening' ? 'vad-listening' : ''}
+            className={isRecording ? 'mic-recording-glow' : handsFreeMode && vadState === 'listening' ? 'vad-listening' : (!isProcessing && !isRecording && !handsFreeMode ? 'mic-idle' : '')}
             style={{
               width: showTextInput ? 80 : 120,
               height: showTextInput ? 80 : 120,
@@ -1945,19 +1945,20 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
               justifyContent: 'center',
               position: 'relative',
               background: isRecording
-                ? 'linear-gradient(135deg, #ff3b30 0%, #c0392b 100%)'
+                ? 'linear-gradient(135deg, #dc3c28 0%, #b02a1a 100%)'
                 : handsFreeMode && vadState === 'listening'
-                ? 'linear-gradient(135deg, #0a2a0a 0%, #1a4a1a 100%)'
+                ? 'linear-gradient(135deg, #2a4a1a 0%, #3a6a2a 100%)'
                 : isSayItBack
-                ? 'linear-gradient(135deg, #c8a200 0%, #ffd60a 100%)'
+                ? 'linear-gradient(135deg, #d4a843 0%, #b8932e 100%)'
                 : isSOS
-                ? 'linear-gradient(135deg, #5a0000 0%, #8b0000 100%)'
-                : 'linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%)',
+                ? 'linear-gradient(135deg, #6a1a0a 0%, #8a2a1a 100%)'
+                : 'linear-gradient(135deg, #c4703f 0%, #d4a843 100%)',
               boxShadow: isRecording
-                ? '0 8px 32px rgba(255,59,48,0.4)'
+                ? '0 8px 32px rgba(220,60,40,0.45)'
                 : isSayItBack
-                ? '0 8px 32px rgba(255,214,10,0.3)'
-                : '0 8px 32px rgba(0,0,0,0.4)',
+                ? '0 8px 32px rgba(212,168,67,0.35)'
+                : '0 8px 40px rgba(196,112,63,0.35)',
+              boxSizing: 'border-box',
               transition: 'background 0.2s, width 0.2s, height 0.2s, box-shadow 0.2s',
             }}
           >
@@ -1991,7 +1992,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
             </div>
           )}
 
-          <div style={{ fontSize: 14, color: isRecording ? '#ff6b6b' : isProcessing ? '#888' : '#666', fontWeight: isRecording ? 600 : 400 }}>
+          <div style={{ fontSize: 14, color: isRecording ? '#f08070' : isProcessing ? 'var(--text-muted)' : 'var(--text-muted)', fontWeight: isRecording ? 700 : 400, letterSpacing: isRecording ? '0' : '0.3px', fontStyle: isRecording ? 'normal' : 'normal' }}>
             {isRecording
               ? handsFreeMode ? 'Speak… (auto-stops on silence)' : 'Tap to stop'
               : isProcessing
@@ -2524,7 +2525,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
 
 export default function VoicePageWrapper() {
   return (
-    <Suspense fallback={<div style={{ background: '#0a0a0a', minHeight: '100vh' }} />}>
+    <Suspense fallback={<div style={{ background: 'var(--bg)', minHeight: '100vh' }} />}>
       <VoicePage />
     </Suspense>
   )

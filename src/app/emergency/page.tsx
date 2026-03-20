@@ -11,8 +11,24 @@ export default function EmergencyPage() {
   }, [router])
 
   return (
-    <div style={{ background: '#0a0a0a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#888', fontSize: 16 }}>🆘 Opening emergency mode…</div>
+    <div style={{
+      background: 'var(--bg)',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        <div style={{ fontSize: 48 }}>🆘</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 16, fontFamily: 'var(--font-heading)' }}>
+          Opening emergency mode…
+        </div>
+      </div>
     </div>
   )
 }
