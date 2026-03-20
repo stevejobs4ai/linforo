@@ -5,13 +5,93 @@ import { useEffect, useState } from 'react'
 import { SCENARIOS } from '@/lib/scenarios'
 import { isOnboardingComplete } from '@/lib/onboarding'
 import { shouldShowAccountNudge } from '@/lib/conversationCount'
+import { computeReadiness } from '@/lib/readiness'
 import Onboarding from '@/components/Onboarding'
+
+const ROLEPLAY_CHARACTERS = [
+  { id: 'waiter', emoji: '🍝', label: 'Waiter', description: 'Trattoria in Rome' },
+  { id: 'shopkeeper', emoji: '🛒', label: 'Shopkeeper', description: 'Florence market' },
+  { id: 'taxi', emoji: '🚕', label: 'Taxi Driver', description: 'Rome streets' },
+  { id: 'hotel', emoji: '🏨', label: 'Hotel Receptionist', description: 'Milan hotel' },
+]
+
+function ReadinessRing({ readiness }: { readiness: number }) {
+  const R = 54
+  const C = 2 * Math.PI * R
+  const offset = C - (readiness / 100) * C
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginBottom: 28,
+        padding: '20px 0 8px',
+      }}
+    >
+      <svg width="128" height="128" aria-label={`${readiness}% travel ready`}>
+        <circle cx="64" cy="64" r={R} fill="none" stroke="#1a1a1a" strokeWidth="10" />
+        <circle
+          cx="64"
+          cy="64"
+          r={R}
+          fill="none"
+          stroke="#0a84ff"
+          strokeWidth="10"
+          strokeDasharray={C}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform="rotate(-90 64 64)"
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+        <text
+          x="64"
+          y="58"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="white"
+          fontSize="26"
+          fontWeight="700"
+          fontFamily="system-ui, sans-serif"
+        >
+          {readiness}%
+        </text>
+        <text
+          x="64"
+          y="80"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#555"
+          fontSize="11"
+          fontFamily="system-ui, sans-serif"
+        >
+          READY
+        </text>
+      </svg>
+      <div
+        style={{
+          fontSize: 15,
+          color: '#888',
+          textAlign: 'center',
+          marginTop: 4,
+        }}
+      >
+        You&apos;re{' '}
+        <span style={{ color: '#0a84ff', fontWeight: 600 }}>{readiness}%</span>{' '}
+        ready for Italy
+      </div>
+    </div>
+  )
+}
 
 export default function ScenarioPicker() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showNudge, setShowNudge] = useState(false)
+  const [readiness, setReadiness] = useState(0)
+  const [showRoleplayPicker, setShowRoleplayPicker] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -20,19 +100,29 @@ export default function ScenarioPicker() {
     } else if (shouldShowAccountNudge()) {
       setShowNudge(true)
     }
+    setReadiness(computeReadiness())
   }, [])
 
   const handleOnboardingComplete = (voiceGender: 'female' | 'male') => {
     void voiceGender
     setShowOnboarding(false)
+    setReadiness(computeReadiness())
     if (shouldShowAccountNudge()) setShowNudge(true)
   }
 
   const handleSelect = (id: string) => {
+    if (id === 'roleplay') {
+      setShowRoleplayPicker(true)
+      return
+    }
     router.push(`/voice?scenario=${id}`)
   }
 
-  // Avoid flash of wrong content on server
+  const handleRoleplayCharacter = (characterId: string) => {
+    setShowRoleplayPicker(false)
+    router.push(`/voice?scenario=roleplay&character=${characterId}`)
+  }
+
   if (!mounted) {
     return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
   }
@@ -50,27 +140,79 @@ export default function ScenarioPicker() {
       style={{ background: '#0a0a0a', padding: '24px 16px' }}
     >
       <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        <h1
+        {/* Header row */}
+        <div
           style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: 'white',
-            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             marginBottom: 8,
           }}
         >
-          🇮🇹 Linforo
-        </h1>
+          <button
+            onClick={() => router.push('/emergency')}
+            style={{
+              background: '#1a0a0a',
+              border: '1px solid #3a1a1a',
+              borderRadius: 20,
+              width: 48,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              cursor: 'pointer',
+            }}
+            aria-label="Emergency phrases"
+          >
+            🆘
+          </button>
+
+          <h1
+            style={{
+              fontSize: 28,
+              fontWeight: 700,
+              color: 'white',
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            🇮🇹 Linforo
+          </h1>
+
+          <button
+            onClick={() => router.push('/history')}
+            style={{
+              background: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: 20,
+              width: 48,
+              height: 48,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              cursor: 'pointer',
+            }}
+            aria-label="Conversation history"
+          >
+            🕐
+          </button>
+        </div>
+
         <p
           style={{
             fontSize: 16,
             color: '#888',
             textAlign: 'center',
-            marginBottom: 32,
+            marginBottom: 8,
           }}
         >
           Choose a scenario to practice
         </p>
+
+        {/* Travel Readiness Ring */}
+        <ReadinessRing readiness={readiness} />
 
         {/* Account nudge banner */}
         {showNudge && (
@@ -119,7 +261,7 @@ export default function ScenarioPicker() {
             border: '1px solid #334',
             borderRadius: 16,
             padding: '28px 24px',
-            marginBottom: 20,
+            marginBottom: 12,
             cursor: 'pointer',
             textAlign: 'left',
             minHeight: 48,
@@ -138,6 +280,38 @@ export default function ScenarioPicker() {
           </div>
           <div style={{ fontSize: 15, color: '#aaa', marginTop: 4 }}>
             {featured.description}
+          </div>
+        </button>
+
+        {/* Roleplay card */}
+        <button
+          onClick={() => handleSelect('roleplay')}
+          style={{
+            width: '100%',
+            background: 'linear-gradient(135deg, #1a0a2e 0%, #2a0f3e 50%, #1a0a5e 100%)',
+            border: '1px solid #443',
+            borderRadius: 16,
+            padding: '22px 24px',
+            marginBottom: 20,
+            cursor: 'pointer',
+            textAlign: 'left',
+            minHeight: 48,
+          }}
+          aria-label="Roleplay a full conversation"
+        >
+          <div style={{ fontSize: 36 }}>🎭</div>
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: 'white',
+              marginTop: 8,
+            }}
+          >
+            Roleplay
+          </div>
+          <div style={{ fontSize: 14, color: '#aaa', marginTop: 4 }}>
+            Full character conversations — waiter, shopkeeper, taxi driver & more
           </div>
         </button>
 
@@ -181,6 +355,106 @@ export default function ScenarioPicker() {
           ))}
         </div>
       </div>
+
+      {/* Roleplay character picker modal */}
+      {showRoleplayPicker && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '0 0 40px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRoleplayPicker(false)
+          }}
+        >
+          <div
+            style={{
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: '20px 20px 0 0',
+              padding: '24px 20px 32px',
+              width: '100%',
+              maxWidth: 600,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 4,
+                background: '#333',
+                borderRadius: 2,
+                margin: '0 auto 20px',
+              }}
+            />
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: 'white',
+                marginBottom: 6,
+              }}
+            >
+              🎭 Choose a character
+            </h2>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
+              You&apos;ll navigate a full conversation in Italian
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {ROLEPLAY_CHARACTERS.map((char) => (
+                <button
+                  key={char.id}
+                  onClick={() => handleRoleplayCharacter(char.id)}
+                  style={{
+                    background: '#1a1a1a',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    minHeight: 64,
+                  }}
+                >
+                  <span style={{ fontSize: 28 }}>{char.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: 17, fontWeight: 600, color: 'white' }}>
+                      {char.label}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#666' }}>
+                      {char.description}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowRoleplayPicker(false)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: '1px solid #333',
+                borderRadius: 14,
+                padding: '14px',
+                color: '#666',
+                fontSize: 15,
+                cursor: 'pointer',
+                marginTop: 14,
+                minHeight: 48,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
