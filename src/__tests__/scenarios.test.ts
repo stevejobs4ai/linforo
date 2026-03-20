@@ -28,4 +28,19 @@ describe('scenarios', () => {
   it('getScenarioById returns undefined for unknown id', () => {
     expect(getScenarioById('nonexistent')).toBeUndefined()
   })
+
+  it('non-freestyle scenarios have systemContext', () => {
+    const restaurant = getScenarioById('restaurant')
+    expect(restaurant?.systemContext).toBeTruthy()
+  })
+
+  it('non-freestyle scenarios have phrases', () => {
+    const restaurant = getScenarioById('restaurant')
+    expect(restaurant?.phrases.length).toBeGreaterThan(0)
+  })
+
+  it('freestyle has empty phrases array', () => {
+    const freestyle = getScenarioById('freestyle')
+    expect(freestyle?.phrases).toHaveLength(0)
+  })
 })

@@ -1,30 +1,32 @@
+import scenariosData from '../../content/scenarios.json'
+
+export interface ScenarioPhrase {
+  italian: string
+  phonetic: string
+  english: string
+}
+
 export interface Scenario {
   id: string
   emoji: string
   title: string
   description: string
+  subtitle: string
+  systemContext: string
+  phrases: ScenarioPhrase[]
   featured?: boolean
 }
 
-export const SCENARIOS: Scenario[] = [
-  {
-    id: 'freestyle',
-    emoji: '🌟',
-    title: 'Freestyle',
-    description: 'Whatever I want',
-    featured: true,
-  },
-  { id: 'restaurant', emoji: '🍽️', title: 'Restaurant', description: 'Order food and drinks' },
-  { id: 'directions', emoji: '🗺️', title: 'Directions', description: 'Ask for and give directions' },
-  { id: 'bathroom', emoji: '🚻', title: 'Bathroom', description: 'Find the restroom' },
-  { id: 'greetings', emoji: '👋', title: 'Greetings', description: 'Say hello and introduce yourself' },
-  { id: 'market', emoji: '🛒', title: 'Market', description: 'Shop at a local market' },
-  { id: 'price', emoji: '💰', title: 'Price', description: 'Ask about prices and haggle' },
-  { id: 'excuse-me', emoji: '🙏', title: 'Excuse Me', description: 'Get attention politely' },
-  { id: 'ask-for-help', emoji: '🆘', title: 'Ask for Help', description: 'Request assistance' },
-  { id: 'the-check', emoji: '🧾', title: 'The Check', description: 'Ask for the bill' },
-  { id: 'thank-you', emoji: '🙏', title: 'Thank You', description: 'Express gratitude' },
-]
+export const SCENARIOS: Scenario[] = scenariosData.scenarios.map((s, i) => ({
+  id: s.id,
+  emoji: s.emoji,
+  title: s.title,
+  subtitle: s.subtitle,
+  description: s.subtitle,
+  systemContext: s.systemContext,
+  phrases: s.phrases as ScenarioPhrase[],
+  featured: i === 0 ? true : undefined,
+}))
 
 export function getScenarioById(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id)

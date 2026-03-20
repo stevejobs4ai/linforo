@@ -1,13 +1,44 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { SCENARIOS } from '@/lib/scenarios'
+import { isOnboardingComplete } from '@/lib/onboarding'
+import { shouldShowAccountNudge } from '@/lib/conversationCount'
+import Onboarding from '@/components/Onboarding'
 
 export default function ScenarioPicker() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showNudge, setShowNudge] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    if (!isOnboardingComplete()) {
+      setShowOnboarding(true)
+    } else if (shouldShowAccountNudge()) {
+      setShowNudge(true)
+    }
+  }, [])
+
+  const handleOnboardingComplete = (voiceGender: 'female' | 'male') => {
+    void voiceGender
+    setShowOnboarding(false)
+    if (shouldShowAccountNudge()) setShowNudge(true)
+  }
 
   const handleSelect = (id: string) => {
     router.push(`/voice?scenario=${id}`)
+  }
+
+  // Avoid flash of wrong content on server
+  if (!mounted) {
+    return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
+  }
+
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />
   }
 
   const featured = SCENARIOS[0]
@@ -40,6 +71,44 @@ export default function ScenarioPicker() {
         >
           Choose a scenario to practice
         </p>
+
+        {/* Account nudge banner */}
+        {showNudge && (
+          <div
+            style={{
+              background: '#1a1a2e',
+              border: '1px solid #334',
+              borderRadius: 12,
+              padding: '12px 16px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <p style={{ fontSize: 14, color: '#aaa', margin: 0 }}>
+              Create an account to save your progress
+            </p>
+            <button
+              onClick={() => setShowNudge(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#555',
+                cursor: 'pointer',
+                fontSize: 18,
+                lineHeight: 1,
+                padding: 4,
+                minWidth: 28,
+                minHeight: 28,
+              }}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Featured: Freestyle */}
         <button

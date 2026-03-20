@@ -2,7 +2,7 @@ import { Scenario } from './scenarios'
 
 export function generateSystemPrompt(scenario: Scenario | undefined, voiceGender: 'male' | 'female'): string {
   const scenarioContext = scenario && scenario.id !== 'freestyle'
-    ? `The user wants to practice the scenario: "${scenario.title}" — ${scenario.description}. Steer conversations toward this context when possible.`
+    ? (scenario.systemContext || `The user wants to practice the scenario: "${scenario.title}" — ${scenario.description}. Steer conversations toward this context when possible.`)
     : 'The user wants freestyle conversation practice. Follow their lead on topics.'
 
   return `You are a patient, warm Italian language tutor. Your student is learning Italian for travel.

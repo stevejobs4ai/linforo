@@ -6,7 +6,8 @@ describe('systemPrompt', () => {
   it('includes scenario context for non-freestyle', () => {
     const scenario = getScenarioById('restaurant')
     const prompt = generateSystemPrompt(scenario, 'female')
-    expect(prompt).toContain('Restaurant')
+    // systemContext for restaurant mentions ordering food
+    expect(prompt).toContain('ordering food')
   })
 
   it('uses freestyle language when no scenario or freestyle selected', () => {
