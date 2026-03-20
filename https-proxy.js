@@ -13,6 +13,20 @@ const dgProxy = httpProxy.createProxyServer({
   ws: true
 });
 
+// Prevent proxy errors from crashing the process
+proxy.on('error', (err, req, res) => {
+  console.error('Proxy error:', err.message);
+  if (res && res.writeHead) {
+    res.writeHead(502, { 'Content-Type': 'text/plain' });
+    res.end('Proxy error');
+  }
+});
+
+dgProxy.on('error', (err, req, res) => {
+  console.error('Deepgram proxy error:', err.message);
+  if (res && res.end) res.end();
+});
+
 const server = https.createServer({
   key: fs.readFileSync('./certs/key.pem'),
   cert: fs.readFileSync('./certs/cert.pem')
@@ -22,7 +36,12 @@ const server = https.createServer({
 
 server.on('upgrade', (req, socket, head) => {
   if (req.url === '/api/transcribe-ws') {
-    dgProxy.ws(req, socket, head);
+    dgProxy.ws(req, socket, head, (err) => {
+      if (err) {
+        console.error('Deepgram WS proxy error:', err.message);
+        socket.destroy();
+      }
+    });
   } else {
     proxy.ws(req, socket, head);
   }

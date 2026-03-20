@@ -254,6 +254,44 @@ export default function ProfilePage() {
     return <div style={{ background: '#0a0a0a', minHeight: '100vh' }} />
   }
 
+  if (!user) {
+    return (
+      <main style={{ background: '#0a0a0a', minHeight: '100vh', padding: '24px 16px' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <button onClick={() => router.back()} style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 20, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', color: 'white' }}>←</button>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', margin: 0 }}>My Profile</h1>
+          </div>
+          <div style={{ background: '#111', border: '1px solid #222', borderRadius: 20, padding: 24, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1a2a3a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#444' }}>?</div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#555' }}>Your Name</div>
+              <div style={{ fontSize: 13, color: '#444', marginTop: 4 }}>🥉 Bronze (starter)</div>
+            </div>
+          </div>
+          <div style={{ background: '#111', border: '1px solid #222', borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: '#444', fontWeight: 600, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>This Month</div>
+            <div style={{ display: 'flex', gap: 16 }}>
+              {[{ label: 'Scenarios practiced', value: 0 }, { label: 'Phrases owned', value: 0 }, { label: 'Roleplays', value: 0 }].map(({ label, value }) => (
+                <div key={label} style={{ flex: 1, textAlign: 'center' as const }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#333' }}>{value}</div>
+                  <div style={{ fontSize: 12, color: '#444', marginTop: 2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: 'linear-gradient(135deg, #0a1a2a 0%, #1a0a2a 100%)', border: '1px solid #1a2a4a', borderRadius: 16, padding: 24, textAlign: 'center' as const }}>
+            <div style={{ fontSize: 22, marginBottom: 8 }}>🇮🇹 Track your Italian journey</div>
+            <div style={{ fontSize: 14, color: '#888', marginBottom: 16 }}>Sign up to save your progress, earn badges, and appear in the community feed.</div>
+            <button onClick={() => router.push('/sign-up')} style={{ background: '#0a84ff', border: 'none', borderRadius: 12, padding: '12px 32px', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+              Sign up to track your progress →
+            </button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   const badge = getBadge(phrasesOwned)
   const nextBadge = getNextBadge(phrasesOwned)
   const displayName = user?.fullName ?? user?.username ?? 'Learner'

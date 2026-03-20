@@ -147,6 +147,19 @@ function VoicePage() {
   const vadAnimFrameRef = useRef<number | null>(null)
   const [vadState, setVadState] = useState<'idle' | 'listening' | 'recording' | 'processing'>('idle')
 
+  // Processing timeout + cancel
+  const processingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeAbortControllerRef = useRef<AbortController | null>(null)
+
+  // SOS mode
+  const isSOS = searchParams.get('sos') === 'true'
+
+  // Overflow menu (three-dot)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Suggestion chips (from URL param or SOS mode)
+  const suggestionParam = searchParams.get('suggestion')
+
   // Analytics tracking
   const roleplayAnalyticsTracked = useRef(false)
   const conversationStartedTracked = useRef(false)
@@ -223,6 +236,35 @@ function VoicePage() {
   const dispatch = useCallback((event: AudioEvent) => {
     setAudioState((prev) => transition(prev, event))
   }, [])
+
+  // Cancel any in-flight processing and reset state
+  const cancelProcessing = useCallback(() => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current)
+      processingTimeoutRef.current = null
+    }
+    if (activeAbortControllerRef.current) {
+      activeAbortControllerRef.current.abort()
+      activeAbortControllerRef.current = null
+    }
+    dispatch('RESET')
+  }, [dispatch])
+
+  const clearProcessingTimeout = useCallback(() => {
+    if (processingTimeoutRef.current) {
+      clearTimeout(processingTimeoutRef.current)
+      processingTimeoutRef.current = null
+    }
+  }, [])
+
+  // Start 15-second processing timeout
+  const startProcessingTimeout = useCallback(() => {
+    if (processingTimeoutRef.current) clearTimeout(processingTimeoutRef.current)
+    processingTimeoutRef.current = setTimeout(() => {
+      cancelProcessing()
+      showToast('Something went wrong — tap the mic to try again', 'error')
+    }, 15000)
+  }, [cancelProcessing, showToast])
 
   const persistSession = useCallback(() => {
     const msgs = messagesForSummaryRef.current
@@ -497,6 +539,11 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
       fullReplyRef.current = ''
       isTTSStreamingRef.current = false
 
+      // Set up abort controller and 15s timeout
+      const controller = new AbortController()
+      activeAbortControllerRef.current = controller
+      startProcessingTimeout()
+
       dispatch('RESPONSE_RECEIVED')
 
       let sentenceBuffer = ''
@@ -517,6 +564,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         const chatRes = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             messages: formatMessagesForAPI([
               ...messagesRef.current,
@@ -526,6 +574,8 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
             stream: true,
           }),
         })
+
+        clearProcessingTimeout()
 
         if (!chatRes.ok) {
           throw new Error(`Chat error: ${chatRes.status}`)
@@ -603,8 +653,11 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           await playTTS(fullReply, () => dispatch('SAY_IT_BACK_TRIGGERED'))
         }
       } catch (err) {
+        clearProcessingTimeout()
+        // If aborted by user cancel or timeout, don't show error
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Streaming chat error:', err)
-        // YY: Fallback to batch mode
+        // YY: Fallback to batch mode (retry once)
         try {
           const chatRes = await fetch('/api/chat', {
             method: 'POST',
@@ -629,12 +682,12 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         } catch (fallbackErr) {
           console.error('Chat fallback error:', fallbackErr)
           // YY: OpenRouter error toast
-          showToast('Our tutor is taking a break — try again in a moment', 'error')
+          showToast('Something went wrong — tap the mic to try again', 'error')
           dispatch('RESET')
         }
       }
     },
-    [dispatch, enqueueTTSSentence, playTTS, showToast]
+    [dispatch, enqueueTTSSentence, playTTS, showToast, startProcessingTimeout, clearProcessingTimeout]
   )
 
   // ── Main mic recording ─────────────────────────────────────────────────────
@@ -763,14 +816,14 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                   transcript = data.transcript
                 } catch (err) {
                   console.error('Transcription fallback error:', err)
-                  // YY: Transcription error toast
-                  showToast('Having trouble hearing you — try again', 'error')
+                  showToast("I didn't catch that — try speaking louder or closer to the mic", 'warning')
                   dispatch('RESET')
                   return
                 }
               }
 
               if (!transcript?.trim()) {
+                showToast("I didn't catch that — try speaking louder or closer to the mic", 'warning')
                 dispatch('RESET')
                 return
               }
@@ -1046,6 +1099,42 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     setIsSendingText(false)
   }, [textInputValue, isSendingText, audioState, isRoleplay, roleplayChar, handleStreamingChat])
 
+  // Send a chip suggestion immediately
+  const handleSendChip = useCallback(async (text: string) => {
+    const currentlyProcessing = audioState === 'processing' || audioState === 'playing' || isSendingText
+    if (currentlyProcessing) return
+    setIsSendingText(true)
+
+    if (!conversationStartedTracked.current) {
+      conversationStartedTracked.current = true
+      trackEvent('conversation_started')
+    }
+
+    const userMsg = createMessage('user', text)
+    setMessages((prev) => [...prev, userMsg])
+
+    const sosSysPrompt = `You are an emergency Italian translation assistant. The user is in Italy and needs immediate help. Reply with: 1) The Italian phrase they need (bold), 2) phonetic pronunciation in parentheses, 3) a dash then the English meaning. Keep it to one line. Be direct and fast.`
+
+    const normalSysPrompt = isRoleplay
+      ? roleplayChar.prompt
+      : generateSystemPrompt(
+          scenarioRef.current,
+          voiceGenderRef.current,
+          getWeakPhrases(3).map((p) => p.phraseItalian).join(', ') || undefined
+        )
+
+    await handleStreamingChat(userMsg, isSOS ? sosSysPrompt : normalSysPrompt)
+    setIsSendingText(false)
+  }, [audioState, isSendingText, isRoleplay, roleplayChar, isSOS, handleStreamingChat])
+
+  // Auto-send URL suggestion on mount
+  useEffect(() => {
+    if (suggestionParam) {
+      handleSendChip(suggestionParam)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleBookmark = (msg: ConversationMessage) => {
     if (!scenario) return
     const bold = msg.text.match(/\*\*([^*]+)\*\*/)
@@ -1235,6 +1324,10 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
     ? `${scenario.emoji} ${scenario.title}`
     : '💬 Freestyle'
 
+  // Detect Nonna persona to hide gender toggle
+  const isNonnaPersona = typeof window !== 'undefined' &&
+    localStorage.getItem('linforo-persona') === 'nonna'
+
   // YY: Toast background colors
   const toastBg = (type: 'error' | 'info' | 'warning') => {
     if (type === 'error') return '#c0392b'
@@ -1332,9 +1425,11 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px',
-          borderBottom: '1px solid #1a1a1a',
+          padding: '14px 16px',
+          borderBottom: isSOS ? '1px solid #3a0a0a' : '1px solid #1a1a1a',
           marginTop: isOffline ? 44 : 0,
+          background: isSOS ? '#1a0a0a' : undefined,
+          position: 'relative',
         }}
       >
         <button
@@ -1342,7 +1437,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           style={{
             background: 'none',
             border: 'none',
-            color: '#888',
+            color: isSOS ? '#ff6b6b' : '#888',
             fontSize: 24,
             cursor: 'pointer',
             minWidth: 48,
@@ -1354,99 +1449,104 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
         >
           ←
         </button>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 14, color: '#888' }}>
-            {isRoleplay ? 'Roleplay' : 'Practicing'}
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 13, color: isSOS ? '#ff6b6b' : '#888' }}>
+            {isSOS ? '🆘 Emergency' : isRoleplay ? 'Roleplay' : 'Practicing'}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'white' }}>
-            {headerTitle}
+          <div style={{ fontSize: 16, fontWeight: 600, color: isSOS ? '#ff6b6b' : 'white' }}>
+            {isSOS ? 'Quick Translate' : headerTitle}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {/* Teach me new ✨ */}
+        {/* Three-dot overflow menu */}
+        <div style={{ position: 'relative' }}>
           <button
-            onClick={handleTeachMeNew}
-            disabled={isProcessing || isRoleplay}
+            onClick={() => setMenuOpen((v) => !v)}
             style={{
               background: '#1a1a1a',
               border: '1px solid #333',
               borderRadius: 20,
-              padding: '8px 10px',
-              color: isRoleplay ? '#333' : '#ccc',
-              fontSize: 18,
-              cursor: isProcessing || isRoleplay ? 'not-allowed' : 'pointer',
-              minHeight: 48,
-              minWidth: 48,
+              width: 48,
+              height: 48,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-            }}
-            aria-label="Teach me something new"
-          >
-            ✨
-          </button>
-          {/* Shadow mode */}
-          <button
-            onClick={toggleShadowMode}
-            disabled={isProcessing || isRoleplay}
-            style={{
-              background: shadowMode ? '#0a2a1a' : '#1a1a1a',
-              border: shadowMode ? '1px solid #1a5a2a' : '1px solid #333',
-              borderRadius: 20,
-              padding: '8px 10px',
-              color: shadowMode ? '#4caf50' : isRoleplay ? '#333' : '#ccc',
-              fontSize: 14,
-              fontWeight: shadowMode ? 700 : 400,
-              cursor: isProcessing || isRoleplay ? 'not-allowed' : 'pointer',
-              minHeight: 48,
-              minWidth: 48,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label={shadowMode ? 'Disable shadowing mode' : 'Enable shadowing mode'}
-          >
-            Shadow
-          </button>
-          {/* Bookmarks */}
-          <button
-            onClick={() => router.push('/phrases')}
-            style={{
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 20,
-              padding: '8px 12px',
-              color: '#ccc',
-              fontSize: 18,
               cursor: 'pointer',
-              minHeight: 48,
-              minWidth: 48,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              fontSize: 20,
+              color: '#888',
+              letterSpacing: 1,
             }}
-            aria-label="My saved phrases"
+            aria-label="More options"
           >
-            ⭐
+            ···
           </button>
-          {/* Voice gender */}
-          <button
-            onClick={toggleVoiceGender}
-            style={{
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: 20,
-              padding: '8px 14px',
-              color: '#ccc',
-              fontSize: 14,
-              cursor: 'pointer',
-              minHeight: 48,
-              minWidth: 48,
-            }}
-            aria-label={`Switch to ${voiceGender === 'female' ? 'male' : 'female'} voice`}
-          >
-            {voiceGender === 'female' ? '♀' : '♂'}
-          </button>
+          {menuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 52,
+                right: 0,
+                background: '#1c1c1e',
+                border: '1px solid #333',
+                borderRadius: 14,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                zIndex: 200,
+                minWidth: 180,
+                overflow: 'hidden',
+              }}
+            >
+              {[
+                {
+                  label: shadowMode ? '🎧 Shadow Mode ON' : '🎧 Shadow Mode',
+                  action: () => { toggleShadowMode(); setMenuOpen(false) },
+                  disabled: isProcessing || isRoleplay,
+                  active: shadowMode,
+                },
+                {
+                  label: '✨ Teach Me',
+                  action: () => { handleTeachMeNew(); setMenuOpen(false) },
+                  disabled: isProcessing || isRoleplay,
+                  active: false,
+                },
+                {
+                  label: '⭐ Bookmarks',
+                  action: () => { router.push('/phrases'); setMenuOpen(false) },
+                  disabled: false,
+                  active: false,
+                },
+                {
+                  label: '⚙️ Settings',
+                  action: () => { router.push('/settings'); setMenuOpen(false) },
+                  disabled: false,
+                  active: false,
+                },
+                ...(!isNonnaPersona ? [{
+                  label: voiceGender === 'female' ? '♀ Female voice' : '♂ Male voice',
+                  action: () => { toggleVoiceGender(); setMenuOpen(false) },
+                  disabled: false,
+                  active: false,
+                }] : []),
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.disabled ? undefined : item.action}
+                  style={{
+                    width: '100%',
+                    background: item.active ? '#0a2a1a' : 'none',
+                    border: 'none',
+                    borderBottom: '1px solid #2a2a2a',
+                    padding: '14px 18px',
+                    color: item.disabled ? '#444' : item.active ? '#4caf50' : '#ccc',
+                    fontSize: 15,
+                    textAlign: 'left',
+                    cursor: item.disabled ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1741,31 +1841,6 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           position: 'relative',
         }}
       >
-        {/* Quick Help panic button */}
-        <button
-          onClick={() => setPanicOpen(true)}
-          style={{
-            position: 'absolute',
-            right: 24,
-            bottom: 52,
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            background: '#1c1c1e',
-            border: '1px solid #333',
-            color: '#888',
-            fontSize: 22,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-          }}
-          aria-label="Quick help"
-        >
-          ❓
-        </button>
-
         {/* QQQ: Hands-free toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
@@ -1820,68 +1895,134 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
           </div>
         )}
 
-        <button
-          onClick={handsFreeMode ? undefined : handleMicClick}
-          disabled={isProcessing || (handsFreeMode && vadState !== 'recording')}
-          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-          className={isRecording ? 'mic-pulse' : handsFreeMode && vadState === 'listening' ? 'vad-listening' : ''}
-          style={{
-            width: showTextInput ? 64 : 80,
-            height: showTextInput ? 64 : 80,
-            borderRadius: '50%',
-            border: 'none',
-            cursor: handsFreeMode
-              ? 'default'
-              : isProcessing
-              ? 'not-allowed'
-              : 'pointer',
-            fontSize: showTextInput ? 26 : 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            background: isRecording
-              ? '#ff3b30'
-              : handsFreeMode && vadState === 'listening'
-              ? '#0a2a0a'
-              : isSayItBack
-              ? '#ffd60a'
-              : '#1c1c1e',
-            color: isRecording || isSayItBack ? 'white' : handsFreeMode && vadState === 'listening' ? '#34c759' : '#888',
-            transition: 'background 0.2s, width 0.2s, height 0.2s',
-          }}
-        >
-          {isRecording ? '⏹' : '🎤'}
-        </button>
-
-        {/* WW: Interim transcript display */}
-        {isRecording && interimTranscript && (
-          <div
-            style={{
-              fontSize: 14,
-              color: '#888',
-              fontStyle: 'italic',
-              textAlign: 'center',
-              maxWidth: 300,
-              lineHeight: 1.4,
-            }}
-          >
-            {interimTranscript}
+        {/* SOS / Scenario chips */}
+        {(isSOS || suggestionParam) && messages.length === 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 380 }}>
+            {(isSOS
+              ? ['Where is the bathroom?', 'I need a doctor', 'Call the police', 'I am lost', 'I don\'t speak Italian']
+              : []
+            ).map((chip) => (
+              <button
+                key={chip}
+                onClick={() => handleSendChip(chip)}
+                disabled={isProcessing || isSendingText}
+                style={{
+                  background: isSOS ? '#2a0a0a' : '#1a1a2a',
+                  border: `1px solid ${isSOS ? '#5a1a1a' : '#2a2a5a'}`,
+                  borderRadius: 20,
+                  padding: '8px 14px',
+                  color: isSOS ? '#ff9999' : '#8888ff',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {chip}
+              </button>
+            ))}
           </div>
         )}
 
-        <div style={{ fontSize: 14, color: '#666' }}>
-          {isRecording
-            ? handsFreeMode ? 'Speak… (auto-stops on silence)' : 'Tap to stop'
-            : isProcessing
-            ? 'Processing...'
-            : handsFreeMode && vadState === 'listening'
-            ? 'Listening for your voice…'
-            : isSayItBack
-            ? shadowMode
-              ? 'Shadow it!'
-              : 'Tap mic to repeat!'
-            : 'Tap to speak'}
+        {/* Giant mic button */}
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={handsFreeMode ? undefined : handleMicClick}
+            disabled={isProcessing || (handsFreeMode && vadState !== 'recording')}
+            aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+            className={isRecording ? 'mic-recording-glow' : handsFreeMode && vadState === 'listening' ? 'vad-listening' : ''}
+            style={{
+              width: showTextInput ? 80 : 120,
+              height: showTextInput ? 80 : 120,
+              borderRadius: '50%',
+              border: 'none',
+              cursor: handsFreeMode
+                ? 'default'
+                : isProcessing
+                ? 'not-allowed'
+                : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              background: isRecording
+                ? 'linear-gradient(135deg, #ff3b30 0%, #c0392b 100%)'
+                : handsFreeMode && vadState === 'listening'
+                ? 'linear-gradient(135deg, #0a2a0a 0%, #1a4a1a 100%)'
+                : isSayItBack
+                ? 'linear-gradient(135deg, #c8a200 0%, #ffd60a 100%)'
+                : isSOS
+                ? 'linear-gradient(135deg, #5a0000 0%, #8b0000 100%)'
+                : 'linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%)',
+              boxShadow: isRecording
+                ? '0 8px 32px rgba(255,59,48,0.4)'
+                : isSayItBack
+                ? '0 8px 32px rgba(255,214,10,0.3)'
+                : '0 8px 32px rgba(0,0,0,0.4)',
+              transition: 'background 0.2s, width 0.2s, height 0.2s, box-shadow 0.2s',
+            }}
+          >
+            {isRecording ? (
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="10" y="10" width="20" height="20" rx="3" fill="white"/>
+              </svg>
+            ) : (
+              <svg width={showTextInput ? 32 : 44} height={showTextInput ? 32 : 44} viewBox="0 0 44 44" fill="none">
+                <rect x="16" y="4" width="12" height="22" rx="6" fill="white"/>
+                <path d="M8 22c0 7.732 6.268 14 14 14s14-6.268 14-14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <line x1="22" y1="36" x2="22" y2="42" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                <line x1="15" y1="42" x2="29" y2="42" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          </button>
+
+          {/* WW: Interim transcript display */}
+          {isRecording && interimTranscript && (
+            <div
+              style={{
+                fontSize: 14,
+                color: '#888',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                maxWidth: 300,
+                lineHeight: 1.4,
+              }}
+            >
+              {interimTranscript}
+            </div>
+          )}
+
+          <div style={{ fontSize: 14, color: isRecording ? '#ff6b6b' : isProcessing ? '#888' : '#666', fontWeight: isRecording ? 600 : 400 }}>
+            {isRecording
+              ? handsFreeMode ? 'Speak… (auto-stops on silence)' : 'Tap to stop'
+              : isProcessing
+              ? 'Processing…'
+              : handsFreeMode && vadState === 'listening'
+              ? 'Listening for your voice…'
+              : isSayItBack
+              ? shadowMode
+                ? 'Shadow it!'
+                : 'Tap mic to repeat!'
+              : 'Tap to speak'}
+          </div>
+
+          {/* Cancel button during processing */}
+          {isProcessing && (
+            <button
+              onClick={cancelProcessing}
+              style={{
+                background: 'none',
+                border: '1px solid #444',
+                borderRadius: 20,
+                padding: '6px 18px',
+                color: '#888',
+                fontSize: 13,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
 
         {/* SSS: Text input fallback */}
@@ -2307,10 +2448,20 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                     summary,
                     scenario?.title ?? 'Italian'
                   )
-                  try {
-                    await navigator.clipboard.writeText(text)
-                  } catch {
-                    // clipboard not available
+                  const shareText = 'I just practiced Italian on Linforo! ' + text
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title: 'Linforo', text: shareText, url: 'https://linforo.app' })
+                    } catch {
+                      // user cancelled or share failed
+                    }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText('I just practiced Italian on Linforo! https://linforo.app')
+                      showToast('Copied to clipboard!', 'info')
+                    } catch {
+                      // ignore
+                    }
                   }
                 }}
                 style={{
@@ -2325,7 +2476,7 @@ Just the Italian phrase, nothing else. Make it natural and useful.`
                   minHeight: 48,
                 }}
               >
-                Share 📋
+                Share 📤
               </button>
               <button
                 onClick={() => router.push('/')}

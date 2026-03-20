@@ -102,6 +102,7 @@ export default function ScenarioPicker() {
   // UUU: Reminder nudge (first-open) + in-app banner
   const [showReminderNudge, setShowReminderNudge] = useState(false)
   const [showReminderBanner, setShowReminderBanner] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState<{ scenarioId: string; title: string; suggestions: string[] } | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -113,7 +114,7 @@ export default function ScenarioPicker() {
         router.push('/interests')
         return
       }
-      if (shouldShowAccountNudge()) setShowNudge(true)
+      if (shouldShowAccountNudge() && localStorage.getItem('linforo-nudge-dismissed') !== '1') setShowNudge(true)
     }
     setReadiness(computeReadiness())
 
@@ -140,20 +141,36 @@ export default function ScenarioPicker() {
 
   const handleOnboardingComplete = (voiceGender: 'female' | 'male') => {
     void voiceGender
-    setShowOnboarding(false)
-    setReadiness(computeReadiness())
     trackEvent('onboarding_completed')
-    // Show interests screen
+    // Navigate to interests without hiding onboarding first — avoids flash
     if (!hasSeenInterests()) {
       router.push('/interests')
       return
     }
-    if (shouldShowAccountNudge()) setShowNudge(true)
+    setShowOnboarding(false)
+    setReadiness(computeReadiness())
+    if (shouldShowAccountNudge() && localStorage.getItem('linforo-nudge-dismissed') !== '1') setShowNudge(true)
+  }
+
+  const SCENARIO_SUGGESTIONS: Record<string, string[]> = {
+    freestyle: ['How do I say hello?', 'How do I introduce myself?', 'How do I ask for directions?', 'Teach me a common phrase'],
+    greetings: ['How do I say hello?', 'How do I introduce myself?', 'How do I say goodbye?', "How do I ask someone's name?"],
+    ordering: ['How do I order food?', 'How do I ask for the menu?', 'How do I ask for the bill?', 'How do I say I am allergic to something?'],
+    shopping: ['How do I ask for the price?', 'How do I ask for a different size?', 'How do I say this is too expensive?', 'How do I say I want to buy this?'],
+    transport: ['How do I ask where the train station is?', 'How do I buy a ticket?', 'How do I ask a taxi driver for an address?', 'How do I ask how far away something is?'],
+    accommodation: ['How do I check in?', 'How do I ask for a room?', 'How do I ask for Wi-Fi?', 'How do I report a problem with my room?'],
+    emergency: ['How do I say I need help?', 'How do I call the police?', 'How do I say I lost my passport?', 'How do I find a pharmacy?'],
   }
 
   const handleSelect = (id: string) => {
     if (id === 'roleplay') {
       setShowRoleplayPicker(true)
+      return
+    }
+    const scenario = SCENARIOS.find((s) => s.id === id)
+    const suggestions = SCENARIO_SUGGESTIONS[id]
+    if (suggestions && scenario) {
+      setShowSuggestions({ scenarioId: id, title: `${scenario.emoji} ${scenario.title}`, suggestions })
       return
     }
     trackEvent('scenario_selected', { scenario: id })
@@ -199,7 +216,7 @@ export default function ScenarioPicker() {
           }}
         >
           <button
-            onClick={() => { trackEvent('emergency_opened'); router.push('/emergency') }}
+            onClick={() => { trackEvent('emergency_opened'); router.push('/voice?sos=true') }}
             style={{
               background: '#1a0a0a',
               border: '1px solid #3a1a1a',
@@ -483,13 +500,24 @@ export default function ScenarioPicker() {
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: 12,
+              cursor: 'pointer',
             }}
+            onClick={() => router.push('/sign-up')}
           >
-            <p style={{ fontSize: 14, color: '#aaa', margin: 0 }}>
-              Create an account to save your progress
-            </p>
+            <div>
+              <p style={{ fontSize: 14, color: '#aaa', margin: 0 }}>
+                Create an account to save your progress
+              </p>
+              <p style={{ fontSize: 12, color: '#0a84ff', margin: '2px 0 0', fontWeight: 600 }}>
+                Tap to sign up →
+              </p>
+            </div>
             <button
-              onClick={() => setShowNudge(false)}
+              onClick={(e) => {
+                e.stopPropagation()
+                localStorage.setItem('linforo-nudge-dismissed', '1')
+                setShowNudge(false)
+              }}
               style={{
                 background: 'none',
                 border: 'none',
@@ -611,6 +639,108 @@ export default function ScenarioPicker() {
           ))}
         </div>
       </div>
+
+      {/* Scenario suggestions bottom sheet */}
+      {showSuggestions && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '0 0 40px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSuggestions(null)
+          }}
+        >
+          <div
+            style={{
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: '20px 20px 0 0',
+              padding: '24px 20px 32px',
+              width: '100%',
+              maxWidth: 600,
+            }}
+          >
+            <div style={{ width: 40, height: 4, background: '#333', borderRadius: 2, margin: '0 auto 20px' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 6 }}>
+              {showSuggestions.title}
+            </h2>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+              What would you like to practice?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+              {showSuggestions.suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    trackEvent('scenario_selected', { scenario: showSuggestions.scenarioId, source: 'suggestion' })
+                    router.push(`/voice?scenario=${showSuggestions.scenarioId}&suggestion=${encodeURIComponent(s)}`)
+                    setShowSuggestions(null)
+                  }}
+                  style={{
+                    background: '#1a1a2a',
+                    border: '1px solid #2a2a4a',
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    color: 'white',
+                    fontSize: 15,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    minHeight: 48,
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                trackEvent('scenario_selected', { scenario: showSuggestions.scenarioId })
+                router.push(`/voice?scenario=${showSuggestions.scenarioId}`)
+                setShowSuggestions(null)
+              }}
+              style={{
+                width: '100%',
+                background: '#0a84ff',
+                border: 'none',
+                borderRadius: 12,
+                padding: '14px',
+                color: 'white',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginBottom: 10,
+                minHeight: 48,
+              }}
+            >
+              🎤 Ask freely
+            </button>
+            <button
+              onClick={() => setShowSuggestions(null)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: '1px solid #333',
+                borderRadius: 12,
+                padding: '12px',
+                color: '#666',
+                fontSize: 14,
+                cursor: 'pointer',
+                minHeight: 44,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Roleplay character picker modal */}
       {showRoleplayPicker && (

@@ -5,7 +5,7 @@ import { LearningReason, completeOnboarding } from '@/lib/onboarding'
 import { PERSONAS, PersonaId, savePersona } from '@/lib/personas'
 import { getAvailableLanguages } from '@/lib/scenarios'
 
-const SAMPLE_TEXT = 'Ciao! Sono la tua tutor italiana. Iniziamo!'
+const SAMPLE_TEXT = 'Ciao! Benvenuto.'
 
 interface OnboardingProps {
   onComplete: (voiceGender: 'female' | 'male') => void
@@ -186,9 +186,26 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
             Why are you learning?
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-muted)', marginBottom: 40 }}>
+          <p style={{ fontSize: 15, color: 'var(--text-muted)', marginBottom: 20 }}>
             We&apos;ll tailor your experience
           </p>
+
+          {/* SOS tip */}
+          <div style={{
+            background: '#1a0a0a',
+            border: '1px solid #3a1a1a',
+            borderRadius: 12,
+            padding: '10px 14px',
+            marginBottom: 24,
+            fontSize: 13,
+            color: '#ff9999',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <span>🆘</span>
+            <span>Tap 🆘 anytime for emergency phrases — just describe your situation and we&apos;ll translate instantly.</span>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {reasons.map((r) => (

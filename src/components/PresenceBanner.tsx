@@ -151,6 +151,9 @@ export default function PresenceBanner({ userId, isPracticing = false }: Props) 
     )
   }
 
+  // Hide banner if no one is practicing
+  if (count < 1) return null
+
   return (
     <div
       style={{
@@ -168,7 +171,7 @@ export default function PresenceBanner({ userId, isPracticing = false }: Props) 
     >
       <span>
         🟢{' '}
-        <strong>{count > 0 ? count : '—'}</strong>{' '}
+        <strong>{count}</strong>{' '}
         {count === 1 ? 'person' : 'people'} practicing Italian right now
       </span>
       <button

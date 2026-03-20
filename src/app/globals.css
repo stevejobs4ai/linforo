@@ -28,6 +28,11 @@
   --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
+:root {
+  --font-sans: 'DM Sans', sans-serif;
+  --font-heading: 'Playfair Display', serif;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -84,4 +89,14 @@ body {
 
 .vad-listening {
   animation: vad-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-glow {
+  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.6), 0 8px 32px rgba(255,59,48,0.3); }
+  70% { box-shadow: 0 0 0 24px rgba(255, 59, 48, 0), 0 8px 32px rgba(255,59,48,0.1); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0), 0 8px 32px rgba(255,59,48,0.3); }
+}
+
+.mic-recording-glow {
+  animation: mic-glow 1.5s ease-in-out infinite;
 }

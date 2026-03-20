@@ -1,17 +1,10 @@
 const KEY = 'linforo-interests'
 const SEEN_KEY = 'linforo-interests-seen'
 
-export type Interest =
-  | 'cooking'
-  | 'soccer'
-  | 'fashion'
-  | 'music'
-  | 'art'
-  | 'history'
-  | 'wine'
-  | 'travel'
-  | 'family'
-  | 'movies'
+// Preset interest IDs — plus any user-defined custom strings
+export type Interest = string
+
+export const PRESET_INTERESTS = ['cooking', 'soccer', 'fashion', 'music', 'art', 'history', 'wine', 'travel', 'family', 'movies'] as const
 
 export const INTERESTS: { id: Interest; emoji: string; label: string }[] = [
   { id: 'cooking', emoji: '🍕', label: 'Cooking' },

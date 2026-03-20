@@ -295,16 +295,62 @@ export default function CommunityPage() {
         )}
 
         {!loading && feed.length === 0 && (
-          <div
-            style={{
-              color: '#555',
-              textAlign: 'center',
-              padding: 40,
-              border: '1px dashed #333',
-              borderRadius: 16,
-            }}
-          >
-            No public completions yet. Be the first! 🇮🇹
+          <div>
+            <div
+              style={{
+                background: '#1a1a0a',
+                border: '1px solid #3a3a1a',
+                borderRadius: 12,
+                padding: '10px 16px',
+                marginBottom: 16,
+                fontSize: 13,
+                color: '#aaa888',
+                textAlign: 'center',
+              }}
+            >
+              Preview — sign up to join the community
+            </div>
+            {[
+              { name: 'Maria', initial: 'M', text: 'mastered Ordering Food 🍝', time: '2h ago' },
+              { name: 'João', initial: 'J', text: 'completed his first roleplay — Gold! 🥇', time: '5h ago' },
+              { name: 'Emma', initial: 'E', text: 'practiced Greetings for the 10th time', time: 'yesterday' },
+            ].map((entry) => (
+              <div
+                key={entry.name}
+                style={{
+                  background: '#111',
+                  border: '1px solid #222',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  opacity: 0.75,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: '#1a3a5a',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0a84ff',
+                      fontWeight: 700,
+                      fontSize: 16,
+                    }}
+                  >
+                    {entry.initial}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, color: 'white', fontSize: 15 }}>{entry.name}</div>
+                    <div style={{ fontSize: 13, color: '#888' }}>{entry.time}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 15, color: '#ccc' }}>{entry.text}</div>
+              </div>
+            ))}
           </div>
         )}
 

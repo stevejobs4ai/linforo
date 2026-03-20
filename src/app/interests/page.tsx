@@ -8,6 +8,7 @@ export default function InterestsPage() {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<Interest>>(new Set())
   const [mounted, setMounted] = useState(false)
+  const [customInput, setCustomInput] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -101,6 +102,87 @@ export default function InterestsPage() {
             </button>
           )
         })}
+      </div>
+
+      {/* Free-text custom interest */}
+      <div style={{ width: '100%', marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>Or type your own…</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const trimmed = customInput.trim()
+                if (trimmed && selected.size < 5) {
+                  setSelected((prev) => new Set([...prev, trimmed.toLowerCase()]))
+                  setCustomInput('')
+                }
+              }
+            }}
+            placeholder="e.g. Formula 1, Lord of the Rings…"
+            style={{
+              flex: 1,
+              background: '#111',
+              border: '1px solid #333',
+              borderRadius: 12,
+              padding: '12px 14px',
+              color: 'white',
+              fontSize: 15,
+              fontFamily: 'inherit',
+              outline: 'none',
+            }}
+          />
+          <button
+            onClick={() => {
+              const trimmed = customInput.trim()
+              if (trimmed && selected.size < 5) {
+                setSelected((prev) => new Set([...prev, trimmed.toLowerCase()]))
+                setCustomInput('')
+              }
+            }}
+            disabled={!customInput.trim() || selected.size >= 5}
+            style={{
+              background: customInput.trim() && selected.size < 5 ? '#0a84ff' : '#222',
+              border: 'none',
+              borderRadius: 12,
+              padding: '12px 16px',
+              color: 'white',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              minWidth: 52,
+            }}
+          >
+            Add
+          </button>
+        </div>
+        {/* Show custom (non-preset) selected items */}
+        {Array.from(selected).filter((id) => !INTERESTS.some((i) => i.id === id)).map((custom) => (
+          <div
+            key={custom}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#0a84ff22',
+              border: '1px solid #0a84ff',
+              borderRadius: 20,
+              padding: '4px 12px',
+              marginTop: 8,
+              marginRight: 6,
+              fontSize: 13,
+              color: '#0a84ff',
+            }}
+          >
+            {custom}
+            <button
+              onClick={() => setSelected((prev) => { const next = new Set(prev); next.delete(custom); return next })}
+              style={{ background: 'none', border: 'none', color: '#0a84ff', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1 }}
+            >×</button>
+          </div>
+        ))}
       </div>
 
       <button

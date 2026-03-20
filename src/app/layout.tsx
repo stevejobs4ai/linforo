@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { DM_Sans, Playfair_Display } from 'next/font/google'
 import Script from 'next/script'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans' })
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-heading' })
 
 export const metadata: Metadata = {
   title: 'Linforo — Learn Italian by Speaking',
@@ -43,7 +44,7 @@ export default function RootLayout({
           {/* Apply theme before paint to avoid flash */}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
-        <body className={inter.className}>
+        <body className={`${dmSans.variable} ${playfair.variable} ${dmSans.className}`}>
           {children}
           {/* Plausible analytics */}
           <Script
